@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap');
+
+:root {
+  --ivory: #FAF8F4;
+  --forest: #2A4430;
+  --forest-dark: #1C3020;
+  --forest-light: #EBF0EC;
+  --olive: #5C7A3E;
+  --beige: #E8E0D0;
+  --terracotta: #C0714F;
+  --text: #1E1E1A;
+  --text-muted: #7A7570;
+  --border: #E2DDD6;
+  --bg-subtle: #F4F1EB;
+
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  --shadow-sm: 0 2px 8px rgba(30, 30, 26, 0.06);
+  --shadow-md: 0 4px 16px rgba(30, 30, 26, 0.08);
+  --shadow-lg: 0 12px 32px rgba(30, 30, 26, 0.1);
+
+  font-family: var(--font-sans);
+  color: var(--text);
+  background: var(--ivory);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ivory);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+#root { min-height: 100vh; }
+
+h1, h2, h3, h4 { margin: 0; line-height: 1.2; }
+p { margin: 0; line-height: 1.6; }
+button { font-family: var(--font-sans); }
+
+.leaflet-container { font-family: var(--font-sans) !important; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+.leaflet-popup-close-button {
+  color: var(--text-muted) !important;
+  font-size: 18px !important;
+  padding: 6px 8px !important;
+}
+
+.senda-marker { background: none !important; border: none !important; }
