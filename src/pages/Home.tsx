@@ -118,8 +118,6 @@ export function Home() {
           <div className="highlight-overlay" />
           <div className="highlight-body">
             <span className="highlight-label">Mejor calificado</span>
-            <h3>Cartagena</h3>
-            <div className="highlight-rating"><Star size={13} fill="currentColor" /> 4.9</div>
           </div>
         </div>
         <div className="highlight-card" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80)' }}>
