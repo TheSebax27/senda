@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MapPin, Star, ArrowRight } from 'lucide-react'
+import { MapPin, ArrowRight } from 'lucide-react'
 import { usePlaces } from '../context/PlacesContext'
 import { PlaceCard } from '../components/PlaceCard'
 import './Home.css'
