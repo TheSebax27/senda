@@ -18,8 +18,8 @@ export function Home() {
       {/* Hero */}
       <section className="hero">
         <div className="hero-image" style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-1522199710521-72d69614c702?w=1600&q=80)'
-        }}>
+  backgroundImage: 'url(https://i.pinimg.com/1200x/90/ff/b9/90ffb9b1b163b494575538e05a209f21.jpg)'
+}}>
           <div className="hero-overlay" />
           <div className="hero-content">
             <p className="hero-eyebrow">Nuestra Senda</p>
