@@ -114,14 +114,6 @@ export function Home() {
 
       {/* Highlights */}
       <section className="section highlights">
-        <div className="highlight-card" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1583682064285-79b3d7bcf5b5?w=800&q=80)' }}>
-          <div className="highlight-overlay" />
-          
-        </div>
-        <div className="highlight-card" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80)' }}>
-          <div className="highlight-overlay" />
-          
-        </div>
         <div className="highlight-card highlight-cta">
           <div className="highlight-cta-content">
             <p>¿A dónde vamos después?</p>
