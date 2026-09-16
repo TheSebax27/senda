@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Menu, X, User, LogOut, Settings } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import './Navbar.css'
 
 const navItems = [
@@ -14,7 +15,27 @@ const navItems = [
 
 export function Navbar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { profile, signOut } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleLogout = async () => {
+    await signOut()
+    navigate('/login')
+  }
 
   return (
     <nav className="navbar">
@@ -43,12 +64,42 @@ export function Navbar() {
         </ul>
 
         <div className="navbar-actions">
-          <Link to="/agregar" className="btn-add-nav">
-            + Nueva huella
-          </Link>
-          <div className="avatar-pair">
-            <div className="avatar" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&q=80)' }} />
-            <div className="avatar" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1494790108755-2616b612b786?w=60&q=80)' }} />
+          <Link to="/agregar" className="btn-add-nav">+ Nueva huella</Link>
+
+          {/* Profile dropdown */}
+          <div className="nav-profile-wrap" ref={profileRef}>
+            <button
+              className="nav-avatar-btn"
+              onClick={() => setProfileOpen(p => !p)}
+              aria-label="Menú de perfil"
+            >
+              {profile?.avatar_url
+                ? <div className="nav-avatar" style={{ backgroundImage: `url(${profile.avatar_url})` }} />
+                : <div className="nav-avatar nav-avatar-placeholder"><User size={14} /></div>
+              }
+            </button>
+
+            {profileOpen && (
+              <div className="nav-profile-dropdown">
+                <div className="dropdown-user">
+                  {profile?.avatar_url
+                    ? <div className="dropdown-avatar" style={{ backgroundImage: `url(${profile.avatar_url})` }} />
+                    : <div className="dropdown-avatar dropdown-avatar-placeholder"><User size={16} /></div>
+                  }
+                  <div>
+                    <p>{profile?.display_name || 'Usuario'}</p>
+                    <span>@{profile?.username || '—'}</span>
+                  </div>
+                </div>
+                <div className="dropdown-divider" />
+                <Link to="/perfil" className="dropdown-item" onClick={() => setProfileOpen(false)}>
+                  <Settings size={14} /> Editar perfil
+                </Link>
+                <button className="dropdown-item dropdown-logout" onClick={handleLogout}>
+                  <LogOut size={14} /> Cerrar sesión
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -72,6 +123,11 @@ export function Navbar() {
           <Link to="/agregar" className="mobile-link-add" onClick={() => setMenuOpen(false)}>
             + Nueva huella
           </Link>
+          <div className="mobile-menu-divider" />
+          <Link to="/perfil" className="mobile-link" onClick={() => setMenuOpen(false)}>Perfil</Link>
+          <button className="mobile-link mobile-logout" onClick={() => { handleLogout(); setMenuOpen(false) }}>
+            Cerrar sesión
+          </button>
         </div>
       )}
     </nav>

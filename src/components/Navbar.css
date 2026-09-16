@@ -90,21 +90,136 @@
   background: var(--forest-dark);
 }
 
-.avatar-pair {
+.nav-profile-wrap {
+  position: relative;
+}
+
+.nav-avatar-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
   display: flex;
 }
 
-.avatar {
-  width: 30px;
-  height: 30px;
+.nav-avatar {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background-size: cover;
   background-position: center;
-  border: 2px solid var(--ivory);
-  margin-left: -8px;
+  border: 2px solid var(--border);
+  transition: border-color 0.15s;
 }
 
-.avatar:first-child { margin-left: 0; }
+.nav-avatar-btn:hover .nav-avatar {
+  border-color: var(--forest);
+}
+
+.nav-avatar-placeholder {
+  background: var(--bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.nav-profile-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 220px;
+  background: var(--ivory);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(30,30,26,0.12);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.dropdown-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+}
+
+.dropdown-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.dropdown-avatar-placeholder {
+  background: var(--bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.dropdown-user p {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+  margin: 0 0 1px;
+}
+
+.dropdown-user span {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+  font-family: var(--font-sans);
+  color: var(--text);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.dropdown-item:hover { background: var(--bg-subtle); }
+
+.dropdown-logout {
+  color: #991B1B;
+}
+
+.mobile-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.25rem 0;
+}
+
+.mobile-logout {
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  color: #991B1B;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  padding: 0.625rem 0;
+}
 
 .mobile-menu-btn {
   display: none;
