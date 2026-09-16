@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase'
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase'
 
 export interface Profile {
   id: string
@@ -15,6 +15,7 @@ interface AuthContextType {
   profile: Profile | null
   session: Session | null
   loading: boolean
+  configured: boolean
   signUp: (email: string, password: string, username: string, displayName: string) => Promise<{ error: string | null }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -31,15 +32,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
+    if (!SUPABASE_CONFIGURED) {
+      setLoading(false)
+      return
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) fetchProfile(session.user.id)
       else setLoading(false)
-    })
+    }).catch(() => setLoading(false))
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
@@ -74,22 +78,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     username: string,
     displayName: string
   ): Promise<{ error: string | null }> => {
+    if (!SUPABASE_CONFIGURED) {
+      return { error: 'La app no está conectada a la base de datos. Configura las variables de entorno en Vercel.' }
+    }
+
     try {
-      // Check username not taken
-      const { data: existing } = await supabase
+      // Verificar username duplicado
+      const { data: existing, error: checkError } = await supabase
         .from('profiles')
         .select('id')
         .eq('username', username.toLowerCase().trim())
         .maybeSingle()
 
+      // Si la tabla no existe aún, ignorar el check y continuar
+      if (checkError && !checkError.message.includes('does not exist')) {
+        console.warn('Username check error:', checkError.message)
+      }
       if (existing) return { error: 'Ese nombre de usuario ya está en uso.' }
 
-      // Check email not taken (Supabase returns error on duplicate)
+      // Registrar usuario
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          // Skip email confirmation — handled in Supabase dashboard
           data: {
             username: username.toLowerCase().trim(),
             display_name: displayName.trim(),
@@ -98,13 +109,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       if (error) {
-        if (error.message.includes('already registered') || error.message.includes('User already registered')) {
+        if (
+          error.message.toLowerCase().includes('already registered') ||
+          error.message.toLowerCase().includes('user already registered') ||
+          error.message.toLowerCase().includes('already been registered')
+        ) {
           return { error: 'Ese correo ya está registrado.' }
         }
         return { error: error.message }
       }
 
-      // Create profile record
+      // Crear perfil
       if (data.user) {
         const { error: profileError } = await supabase.from('profiles').insert({
           id: data.user.id,
@@ -112,29 +127,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           display_name: displayName.trim(),
           avatar_url: null,
         })
-        if (profileError) console.error('Profile insert error:', profileError)
-        else await fetchProfile(data.user.id)
+        if (profileError) {
+          console.error('Profile insert error:', profileError.message)
+          // No fallar el registro si el trigger ya lo creó
+        }
+        await fetchProfile(data.user.id)
       }
 
       return { error: null }
-    } catch (err) {
-      return { error: 'Ocurrió un error inesperado.' }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        return { error: 'No se pudo conectar a Supabase. Verifica que las variables VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY estén configuradas en Vercel y haz un Redeploy.' }
+      }
+      return { error: `Error inesperado: ${msg}` }
     }
   }
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+    if (!SUPABASE_CONFIGURED) {
+      return { error: 'La app no está conectada a la base de datos. Configura las variables de entorno en Vercel.' }
+    }
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       })
       if (error) {
-        if (error.message.includes('Invalid login')) return { error: 'Correo o contraseña incorrectos.' }
+        if (error.message.toLowerCase().includes('invalid login') || error.message.toLowerCase().includes('invalid credentials')) {
+          return { error: 'Correo o contraseña incorrectos.' }
+        }
         return { error: error.message }
       }
       return { error: null }
-    } catch {
-      return { error: 'Ocurrió un error inesperado.' }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        return { error: 'No se pudo conectar a Supabase. Verifica la configuración en Vercel.' }
+      }
+      return { error: `Error inesperado: ${msg}` }
     }
   }
 
@@ -148,7 +179,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ): Promise<{ error: string | null }> => {
     if (!user) return { error: 'No hay sesión activa.' }
     try {
-      // If changing username, check it's not taken
       if (updates.username) {
         const clean = updates.username.toLowerCase().trim()
         const { data: existing } = await supabase
@@ -170,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetchProfile(user.id)
       return { error: null }
     } catch {
-      return { error: 'Ocurrió un error inesperado.' }
+      return { error: 'Error al actualizar el perfil.' }
     }
   }
 
@@ -187,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (uploadError) return { url: null, error: uploadError.message }
 
       const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-      const url = data.publicUrl + `?t=${Date.now()}` // bust cache
+      const url = data.publicUrl + `?t=${Date.now()}`
       await updateProfile({ avatar_url: url })
       return { url, error: null }
     } catch {
@@ -196,7 +226,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, session, loading, signUp, signIn, signOut, updateProfile, uploadAvatar }}>
+    <AuthContext.Provider value={{
+      user, profile, session, loading,
+      configured: SUPABASE_CONFIGURED,
+      signUp, signIn, signOut, updateProfile, uploadAvatar
+    }}>
       {children}
     </AuthContext.Provider>
   )

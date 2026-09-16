@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import './Auth.css'
 
 export function Login() {
-  const { signIn } = useAuth()
+  const { signIn, configured } = useAuth()
   const navigate = useNavigate()
 
   const [form, setForm] = useState({ email: '', password: '' })
@@ -51,6 +51,13 @@ export function Login() {
             <h1>Bienvenido de vuelta</h1>
             <p>Accede a vuestra senda compartida.</p>
           </div>
+
+          {!configured && (
+            <div className="auth-warn">
+              <AlertTriangle size={15} />
+              <span>Las variables de entorno de Supabase no están configuradas. Agrégalas en Vercel → Settings → Environment Variables y haz Redeploy.</span>
+            </div>
+          )}
 
           <form className="auth-form" onSubmit={handleSubmit}>
             <div className="auth-field">

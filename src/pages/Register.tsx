@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Camera, User } from 'lucide-react'
+import { Eye, EyeOff, Camera, User, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import './Auth.css'
 
 export function Register() {
-  const { signUp, uploadAvatar } = useAuth()
+  const { signUp, uploadAvatar, configured } = useAuth()
   const navigate = useNavigate()
 
   const [form, setForm] = useState({
@@ -25,10 +25,7 @@ export function Register() {
   const handleAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      setError('La foto no puede superar los 5 MB.')
-      return
-    }
+    if (file.size > 5 * 1024 * 1024) { setError('La foto no puede superar los 5 MB.'); return }
     setAvatarFile(file)
     setAvatarPreview(URL.createObjectURL(file))
     setError(null)
@@ -62,7 +59,7 @@ export function Register() {
       return
     }
 
-    // Upload avatar if selected (user is now logged in)
+    // Subir avatar si se seleccionó
     if (avatarFile) {
       const { error: avatarError } = await uploadAvatar(avatarFile)
       if (avatarError) console.warn('Avatar upload failed:', avatarError)
@@ -96,6 +93,13 @@ export function Register() {
             <p>Solo dos personas pueden registrarse.</p>
           </div>
 
+          {!configured && (
+            <div className="auth-warn">
+              <AlertTriangle size={15} />
+              <span>Supabase no está configurado. Agrega <strong>VITE_SUPABASE_URL</strong> y <strong>VITE_SUPABASE_ANON_KEY</strong> en Vercel → Settings → Environment Variables y haz Redeploy.</span>
+            </div>
+          )}
+
           <form className="auth-form" onSubmit={handleSubmit}>
             {/* Avatar picker */}
             <div className="avatar-picker">
@@ -105,9 +109,7 @@ export function Register() {
                 style={avatarPreview ? { backgroundImage: `url(${avatarPreview})` } : {}}
               >
                 {!avatarPreview && <User size={28} className="avatar-placeholder-icon" />}
-                <div className="avatar-camera">
-                  <Camera size={14} />
-                </div>
+                <div className="avatar-camera"><Camera size={14} /></div>
               </div>
               <div className="avatar-info">
                 <p>Foto de perfil</p>

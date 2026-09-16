@@ -239,6 +239,25 @@
   padding-left: 1.75rem;
 }
 
+/* Warning banner */
+.auth-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #FFFBEB;
+  border: 1px solid #FCD34D;
+  color: #92400E;
+  font-size: 0.8rem;
+  font-family: var(--font-sans);
+  padding: 0.75rem 0.875rem;
+  border-radius: 8px;
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+}
+
+.auth-warn svg { flex-shrink: 0; margin-top: 1px; }
+.auth-warn strong { font-weight: 600; }
+
 /* Error */
 .auth-error {
   background: #FEF2F2;
