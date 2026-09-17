@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Place, PlaceInsert } from '../types'
+import type { Place, PlaceInsert, Rating, RatingInsert } from '../types'
+import { useAuth } from './AuthContext'
 
 interface PlacesContextType {
   places: Place[]
@@ -10,6 +11,10 @@ interface PlacesContextType {
   deletePlace: (id: string) => Promise<void>
   convertToMemory: (id: string) => Promise<void>
   refresh: () => Promise<void>
+  // Ratings
+  getRatings: (placeId: string) => Promise<Rating[]>
+  upsertRating: (placeId: string, rating: number, comment: string | null) => Promise<{ error: string | null }>
+  deleteRating: (placeId: string) => Promise<void>
 }
 
 const PlacesContext = createContext<PlacesContextType | null>(null)
@@ -17,6 +22,7 @@ const PlacesContext = createContext<PlacesContextType | null>(null)
 export function PlacesProvider({ children }: { children: ReactNode }) {
   const [places, setPlaces] = useState<Place[]>([])
   const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
 
   useEffect(() => {
     fetchPlaces()
@@ -40,9 +46,10 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
   }
 
   const addPlace = async (placeData: PlaceInsert) => {
+    const payload = { ...placeData, created_by: user?.id ?? null }
     const { data, error } = await supabase
       .from('places')
-      .insert(placeData)
+      .insert(payload)
       .select()
       .single()
     if (error) throw error
@@ -66,8 +73,87 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
     await updatePlace(id, { is_planned: false, visit_date: today })
   }
 
+  // --- Ratings ---
+
+  const getRatings = async (placeId: string): Promise<Rating[]> => {
+    const { data, error } = await supabase
+      .from('ratings')
+      .select('*, profile:profiles(display_name, username, avatar_url)')
+      .eq('place_id', placeId)
+      .order('created_at', { ascending: false })
+    if (error) {
+      console.error('Error fetching ratings:', error)
+      return []
+    }
+    return (data as Rating[]) || []
+  }
+
+  const upsertRating = async (
+    placeId: string,
+    rating: number,
+    comment: string | null
+  ): Promise<{ error: string | null }> => {
+    if (!user) return { error: 'No hay sesión activa.' }
+
+    const payload: RatingInsert = {
+      place_id: placeId,
+      user_id: user.id,
+      rating,
+      comment: comment || null,
+    }
+
+    // Upsert: si el usuario ya calificó este lugar, actualiza; si no, inserta
+    const { error } = await supabase
+      .from('ratings')
+      .upsert(payload, { onConflict: 'place_id,user_id' })
+
+    if (error) return { error: error.message }
+
+    // Recalcular rating_avg en el lugar
+    await recalcPlaceAvg(placeId)
+    return { error: null }
+  }
+
+  const deleteRating = async (placeId: string) => {
+    if (!user) return
+    await supabase
+      .from('ratings')
+      .delete()
+      .eq('place_id', placeId)
+      .eq('user_id', user.id)
+    await recalcPlaceAvg(placeId)
+  }
+
+  async function recalcPlaceAvg(placeId: string) {
+    // Fetch all ratings for this place and calculate avg
+    const { data } = await supabase
+      .from('ratings')
+      .select('rating')
+      .eq('place_id', placeId)
+
+    if (!data) return
+    const avg = data.length > 0
+      ? data.reduce((sum, r) => sum + r.rating, 0) / data.length
+      : 0
+
+    const rounded = Math.round(avg * 10) / 10
+
+    await supabase
+      .from('places')
+      .update({ rating_avg: rounded })
+      .eq('id', placeId)
+
+    setPlaces(prev => prev.map(p =>
+      p.id === placeId ? { ...p, rating_avg: rounded } : p
+    ))
+  }
+
   return (
-    <PlacesContext.Provider value={{ places, loading, addPlace, updatePlace, deletePlace, convertToMemory, refresh: fetchPlaces }}>
+    <PlacesContext.Provider value={{
+      places, loading,
+      addPlace, updatePlace, deletePlace, convertToMemory, refresh: fetchPlaces,
+      getRatings, upsertRating, deleteRating,
+    }}>
       {children}
     </PlacesContext.Provider>
   )

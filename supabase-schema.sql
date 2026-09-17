@@ -179,3 +179,42 @@ CREATE TRIGGER on_auth_user_created
 --    - place-photos
 --
 -- 5. Registra los dos usuarios en la app
+
+-- -------------------------------------------------------
+-- RATINGS table (agrega esto al schema existente)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.ratings (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  place_id    UUID NOT NULL REFERENCES public.places(id) ON DELETE CASCADE,
+  user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  rating      NUMERIC(3,1) NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment     TEXT,
+  -- Un usuario solo puede calificar un lugar una vez
+  UNIQUE (place_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ratings_place ON public.ratings (place_id);
+CREATE INDEX IF NOT EXISTS idx_ratings_user  ON public.ratings (user_id);
+
+-- RLS ratings
+ALTER TABLE public.ratings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Autenticados ven calificaciones"
+  ON public.ratings FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Usuarios insertan su propia calificación"
+  ON public.ratings FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Usuarios actualizan su propia calificación"
+  ON public.ratings FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Usuarios eliminan su propia calificación"
+  ON public.ratings FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- También necesitas agregar created_by a places si no existe:
+ALTER TABLE public.places ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);

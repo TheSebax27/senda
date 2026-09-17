@@ -1,7 +1,15 @@
-{
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
-}
+# SENDA — Variables de entorno
+# Copia este archivo como .env.local y completa tus valores de Supabase
+
+# Supabase Project URL (Settings > API > Project URL)
+VITE_SUPABASE_URL=https://xxxxxxxxxxxxxxxxxxxx.supabase.co
+
+# Supabase Anon/Public Key (Settings > API > Project API keys > anon public)
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# ¿Cómo obtener estos valores?
+# 1. Ve a https://supabase.com y crea un proyecto nuevo llamado "senda"
+# 2. En el dashboard, ve a Settings > API
+# 3. Copia el "Project URL" en VITE_SUPABASE_URL
+# 4. Copia el "anon public" key en VITE_SUPABASE_ANON_KEY
+# 5. Ejecuta el archivo supabase-schema.sql en el SQL Editor de Supabase

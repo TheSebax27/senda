@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MapPin, ArrowRight } from 'lucide-react'
+import { MapPin, Star, ArrowRight } from 'lucide-react'
 import { usePlaces } from '../context/PlacesContext'
 import { PlaceCard } from '../components/PlaceCard'
 import './Home.css'
@@ -18,8 +18,8 @@ export function Home() {
       {/* Hero */}
       <section className="hero">
         <div className="hero-image" style={{
-  backgroundImage: 'url(https://i.pinimg.com/1200x/90/ff/b9/90ffb9b1b163b494575538e05a209f21.jpg)'
-}}>
+          backgroundImage: 'url(https://images.unsplash.com/photo-1522199710521-72d69614c702?w=1600&q=80)'
+        }}>
           <div className="hero-overlay" />
           <div className="hero-content">
             <p className="hero-eyebrow">Nuestra Senda</p>
@@ -114,6 +114,22 @@ export function Home() {
 
       {/* Highlights */}
       <section className="section highlights">
+        <div className="highlight-card" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1583682064285-79b3d7bcf5b5?w=800&q=80)' }}>
+          <div className="highlight-overlay" />
+          <div className="highlight-body">
+            <span className="highlight-label">Mejor calificado</span>
+            <h3>Cartagena</h3>
+            <div className="highlight-rating"><Star size={13} fill="currentColor" /> 4.9</div>
+          </div>
+        </div>
+        <div className="highlight-card" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80)' }}>
+          <div className="highlight-overlay" />
+          <div className="highlight-body">
+            <span className="highlight-label">Primera cita</span>
+            <h3>La Trattoria</h3>
+            <div className="highlight-rating"><Star size={13} fill="currentColor" /> 4.8</div>
+          </div>
+        </div>
         <div className="highlight-card highlight-cta">
           <div className="highlight-cta-content">
             <p>¿A dónde vamos después?</p>

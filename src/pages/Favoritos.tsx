@@ -124,7 +124,7 @@ export function Favoritos() {
                     <span>{p.city}</span>
                     <div className="worst-rating"><Star size={11} fill="currentColor" /> {p.rating_avg.toFixed(1)}</div>
                   </div>
-                  {p.comment_him && <p className="worst-quote">"{p.comment_him}"</p>}
+
                 </Link>
               ))}
             </div>

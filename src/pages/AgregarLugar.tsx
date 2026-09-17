@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Star, Upload } from 'lucide-react'
+import { Star, Upload, X, ImagePlus } from 'lucide-react'
 import { usePlaces } from '../context/PlacesContext'
+import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 import type { PlaceType, PlaceInsert } from '../types'
 import './AgregarLugar.css'
 
@@ -26,16 +28,17 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
           onMouseLeave={() => setHover(0)}
           onClick={() => onChange(n)}
         >
-          <Star size={20} fill={n <= (hover || value) ? 'currentColor' : 'none'} />
+          <Star size={22} fill={n <= (hover || value) ? 'currentColor' : 'none'} />
         </button>
       ))}
-      <span className="star-value">{value > 0 ? value.toFixed(1) : '—'}</span>
+      <span className="star-value">{value > 0 ? `${value}.0` : '—'}</span>
     </div>
   )
 }
 
 export function AgregarLugar() {
-  const { addPlace } = usePlaces()
+  const { upsertRating } = usePlaces()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
 
   const [form, setForm] = useState({
@@ -44,54 +47,112 @@ export function AgregarLugar() {
     city: '',
     country: 'Colombia',
     visit_date: '',
-    rating_him: 0,
-    rating_her: 0,
+    myRating: 0,
+    myComment: '',
     price_level: 2,
     would_return: null as boolean | null,
     story: '',
-    comment_him: '',
-    comment_her: '',
     lat: null as number | null,
     lng: null as number | null,
     tags: '',
   })
 
+  const [photos, setPhotos] = useState<File[]>([])
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handlePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const valid = files.filter(f => f.size <= 10 * 1024 * 1024)
+    if (valid.length < files.length) setError('Algunas fotos superan 10MB y fueron ignoradas.')
+    setPhotos(prev => [...prev, ...valid].slice(0, 6))
+    setPhotoPreviews(prev => [...prev, ...valid.map(f => URL.createObjectURL(f))].slice(0, 6))
+  }
+
+  const removePhoto = (i: number) => {
+    setPhotos(prev => prev.filter((_, idx) => idx !== i))
+    setPhotoPreviews(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  const uploadPhotos = async (placeId: string): Promise<string[]> => {
+    const urls: string[] = []
+    for (const file of photos) {
+      const ext = file.name.split('.').pop()
+      const path = `${placeId}/${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('place-photos').upload(path, file)
+      if (!error) {
+        const { data } = supabase.storage.from('place-photos').getPublicUrl(path)
+        urls.push(data.publicUrl)
+      }
+    }
+    return urls
+  }
 
   const handleSubmit = async () => {
-    if (!form.name || !form.type || !form.city) return
-    const avg = form.rating_him > 0 && form.rating_her > 0
-      ? (form.rating_him + form.rating_her) / 2
-      : form.rating_him || form.rating_her
-
-    const payload: PlaceInsert = {
-      name: form.name,
-      type: form.type as PlaceType,
-      city: form.city,
-      country: form.country,
-      visit_date: form.visit_date,
-      rating_him: form.rating_him,
-      rating_her: form.rating_her,
-      rating_avg: avg,
-      price_level: form.price_level,
-      would_return: form.would_return,
-      story: form.story || null,
-      comment_him: form.comment_him || null,
-      comment_her: form.comment_her || null,
-      lat: form.lat,
-      lng: form.lng,
-      photos: [],
-      is_favorite: false,
-      is_planned: false,
-      priority: null,
-      budget: null,
-      planned_year: null,
-      tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+    setError(null)
+    if (!form.name || !form.type || !form.city) {
+      setError('Nombre, tipo y ciudad son obligatorios.')
+      return
     }
 
-    await addPlace(payload)
-    setSubmitted(true)
-    setTimeout(() => navigate('/lugares'), 1200)
+    setUploading(true)
+    try {
+      // Insert place first (sin fotos) para obtener el id
+      const payload: PlaceInsert = {
+        name: form.name,
+        type: form.type as PlaceType,
+        city: form.city,
+        country: form.country,
+        visit_date: form.visit_date || '',
+        price_level: form.price_level,
+        would_return: form.would_return,
+        story: form.story || null,
+        lat: form.lat,
+        lng: form.lng,
+        photos: [],
+        is_favorite: false,
+        is_planned: false,
+        priority: null,
+        budget: null,
+        planned_year: null,
+        tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        created_by: user?.id ?? null,
+      }
+
+      // Insert and get id
+      const { data: newPlace, error: insertError } = await supabase
+        .from('places')
+        .insert(payload)
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      // Upload photos
+      let photoUrls: string[] = []
+      if (photos.length > 0) {
+        photoUrls = await uploadPhotos(newPlace.id)
+        if (photoUrls.length > 0) {
+          await supabase.from('places').update({ photos: photoUrls }).eq('id', newPlace.id)
+          newPlace.photos = photoUrls
+        }
+      }
+
+      // Save my rating if provided
+      if (form.myRating > 0) {
+        await upsertRating(newPlace.id, form.myRating, form.myComment || null)
+      }
+
+      setSubmitted(true)
+      setTimeout(() => navigate(`/lugares/${newPlace.id}`), 1200)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al guardar el lugar.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   if (submitted) {
@@ -113,18 +174,13 @@ export function AgregarLugar() {
         </div>
 
         <div className="agregar-form">
-          {/* Basic info */}
+          {/* Lugar */}
           <div className="form-section">
             <h3>¿Dónde estuvieron?</h3>
             <div className="form-row">
               <div className="form-group flex-2">
                 <label>Nombre del lugar</label>
-                <input
-                  type="text"
-                  placeholder="Ej. La Trattoria"
-                  value={form.name}
-                  onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-                />
+                <input type="text" placeholder="Ej. La Trattoria" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
               </div>
               <div className="form-group">
                 <label>Tipo</label>
@@ -150,37 +206,38 @@ export function AgregarLugar() {
             </div>
           </div>
 
-          {/* Ratings */}
+          {/* Mi calificación */}
           <div className="form-section">
-            <h3>¿Cómo lo calificaron?</h3>
-            <div className="form-row ratings-row">
-              <div className="form-group">
-                <label>
-                  <div className="label-avatar" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&q=80)' }} />
-                  Calificación de él
-                </label>
-                <StarRating value={form.rating_him} onChange={v => setForm(p => ({ ...p, rating_him: v }))} />
-              </div>
-              <div className="form-group">
-                <label>
-                  <div className="label-avatar" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1494790108755-2616b612b786?w=60&q=80)' }} />
-                  Calificación de ella
-                </label>
-                <StarRating value={form.rating_her} onChange={v => setForm(p => ({ ...p, rating_her: v }))} />
+            <h3>Tu calificación</h3>
+            <div className="my-rating-row">
+              {profile?.avatar_url
+                ? <div className="form-user-avatar" style={{ backgroundImage: `url(${profile.avatar_url})` }} />
+                : <div className="form-user-avatar form-user-avatar-placeholder">
+                    <span>{profile?.display_name?.[0]?.toUpperCase() || '?'}</span>
+                  </div>
+              }
+              <div>
+                <p className="form-user-name">{profile?.display_name || 'Tú'}</p>
+                <StarRating value={form.myRating} onChange={v => setForm(p => ({ ...p, myRating: v }))} />
               </div>
             </div>
+            <div className="form-group" style={{ marginTop: '0.875rem' }}>
+              <label>Tu comentario <span className="hint">(opcional)</span></label>
+              <input
+                type="text"
+                placeholder='"Una experiencia que repetiría."'
+                value={form.myComment}
+                onChange={e => setForm(p => ({ ...p, myComment: e.target.value }))}
+              />
+            </div>
+            <p className="rating-note">El otro integrante puede agregar su calificación desde la página del lugar.</p>
 
-            <div className="form-row">
+            <div className="form-row" style={{ marginTop: '1rem' }}>
               <div className="form-group">
                 <label>Precio aproximado</label>
                 <div className="price-selector">
                   {[1, 2, 3, 4].map(n => (
-                    <button
-                      key={n}
-                      type="button"
-                      className={`price-btn ${form.price_level === n ? 'active' : ''}`}
-                      onClick={() => setForm(p => ({ ...p, price_level: n }))}
-                    >
+                    <button key={n} type="button" className={`price-btn ${form.price_level === n ? 'active' : ''}`} onClick={() => setForm(p => ({ ...p, price_level: n }))}>
                       {'$'.repeat(n)}
                     </button>
                   ))}
@@ -197,37 +254,39 @@ export function AgregarLugar() {
             </div>
           </div>
 
-          {/* Photos */}
+          {/* Fotos */}
           <div className="form-section">
             <h3>Fotografías</h3>
-            <div className="photo-upload">
-              <Upload size={20} />
-              <p>Arrastra fotos aquí o haz clic para seleccionar</p>
-              <span>Las fotos se subirán a Supabase Storage</span>
-            </div>
+            {photoPreviews.length > 0 && (
+              <div className="photo-grid">
+                {photoPreviews.map((src, i) => (
+                  <div key={i} className="photo-thumb" style={{ backgroundImage: `url(${src})` }}>
+                    <button className="photo-remove" type="button" onClick={() => removePhoto(i)}><X size={12} /></button>
+                  </div>
+                ))}
+                {photoPreviews.length < 6 && (
+                  <button type="button" className="photo-add-more" onClick={() => fileRef.current?.click()}>
+                    <ImagePlus size={20} />
+                  </button>
+                )}
+              </div>
+            )}
+            {photoPreviews.length === 0 && (
+              <div className="photo-upload" onClick={() => fileRef.current?.click()}>
+                <Upload size={20} />
+                <p>Toca para agregar fotos</p>
+                <span>JPG, PNG · máx. 10 MB por foto · hasta 6 fotos</span>
+              </div>
+            )}
+            <input ref={fileRef} type="file" accept="image/*" multiple onChange={handlePhotos} hidden />
           </div>
 
-          {/* Story */}
+          {/* Historia */}
           <div className="form-section">
             <h3>Nuestra historia</h3>
             <div className="form-group">
-              <label>¿Qué recuerdan de este lugar?</label>
-              <textarea
-                rows={4}
-                placeholder="Cuéntanos la historia de este lugar..."
-                value={form.story}
-                onChange={e => setForm(p => ({ ...p, story: e.target.value }))}
-              />
-            </div>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Lo que dijo él</label>
-                <input type="text" placeholder='"Una experiencia que repetiría."' value={form.comment_him} onChange={e => setForm(p => ({ ...p, comment_him: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label>Lo que dijo ella</label>
-                <input type="text" placeholder='"Quiero volver."' value={form.comment_her} onChange={e => setForm(p => ({ ...p, comment_her: e.target.value }))} />
-              </div>
+              <label>¿Qué recuerdan de este lugar? <span className="hint">(opcional)</span></label>
+              <textarea rows={4} placeholder="Cuéntanos la historia de este lugar..." value={form.story} onChange={e => setForm(p => ({ ...p, story: e.target.value }))} />
             </div>
             <div className="form-group">
               <label>Etiquetas <span className="hint">(separadas por coma)</span></label>
@@ -235,12 +294,14 @@ export function AgregarLugar() {
             </div>
           </div>
 
+          {error && <div className="auth-error">{error}</div>}
+
           <button
             className="btn-save"
             onClick={handleSubmit}
-            disabled={!form.name || !form.type || !form.city}
+            disabled={!form.name || !form.type || !form.city || uploading}
           >
-            ✦ Guardar huella
+            {uploading ? <span className="auth-spinner" style={{ borderTopColor: 'var(--ivory)' }} /> : '✦ Guardar huella'}
           </button>
         </div>
       </div>

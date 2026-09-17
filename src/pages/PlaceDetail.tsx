@@ -1,16 +1,91 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Star, RotateCcw, Calendar, DollarSign } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ArrowLeft, MapPin, Star, RotateCcw, Calendar, DollarSign, Pencil, Trash2, User } from 'lucide-react'
 import { usePlaces } from '../context/PlacesContext'
+import { useAuth } from '../context/AuthContext'
 import { typeLabel, formatDate, priceLabel } from '../lib/utils'
+import type { Rating } from '../types'
 import './PlaceDetail.css'
 
-const categoryRatings = ['Comida', 'Ambiente', 'Precio', 'Servicio', 'Experiencia']
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0)
+  return (
+    <div className="star-picker">
+      {[1, 2, 3, 4, 5].map(n => (
+        <button
+          key={n}
+          type="button"
+          onMouseEnter={() => setHover(n)}
+          onMouseLeave={() => setHover(0)}
+          onClick={() => onChange(n)}
+          className={`star-pick-btn ${n <= (hover || value) ? 'active' : ''}`}
+        >
+          <Star size={22} fill={n <= (hover || value) ? 'currentColor' : 'none'} />
+        </button>
+      ))}
+    </div>
+  )
+}
 
 export function PlaceDetail() {
   const { id } = useParams()
-  const { places } = usePlaces()
+  const { places, getRatings, upsertRating, deleteRating } = usePlaces()
+  const { user } = useAuth()
   const navigate = useNavigate()
+
   const place = places.find(p => p.id === id)
+
+  const [ratings, setRatings] = useState<Rating[]>([])
+  const [ratingsLoading, setRatingsLoading] = useState(true)
+
+  // My rating form
+  const myRating = ratings.find(r => r.user_id === user?.id)
+  const [myStars, setMyStars] = useState(myRating?.rating || 0)
+  const [myComment, setMyComment] = useState(myRating?.comment || '')
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveMsg, setSaveMsg] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!id) return
+    setRatingsLoading(true)
+    getRatings(id).then(data => {
+      setRatings(data)
+      const mine = data.find(r => r.user_id === user?.id)
+      if (mine) {
+        setMyStars(mine.rating)
+        setMyComment(mine.comment || '')
+      }
+      setRatingsLoading(false)
+    })
+  }, [id])
+
+  const handleSaveRating = async () => {
+    if (!id || myStars === 0) return
+    setSaving(true)
+    setSaveMsg(null)
+    const { error } = await upsertRating(id, myStars, myComment || null)
+    if (error) {
+      setSaveMsg('Error al guardar: ' + error)
+    } else {
+      const updated = await getRatings(id)
+      setRatings(updated)
+      setSaveMsg('¡Calificación guardada!')
+      setEditing(false)
+      setTimeout(() => setSaveMsg(null), 3000)
+    }
+    setSaving(false)
+  }
+
+  const handleDeleteRating = async () => {
+    if (!id) return
+    await deleteRating(id)
+    const updated = await getRatings(id)
+    setRatings(updated)
+    setMyStars(0)
+    setMyComment('')
+    setEditing(false)
+  }
 
   if (!place) {
     return (
@@ -22,6 +97,8 @@ export function PlaceDetail() {
   }
 
   const photo = place.photos[0] || 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1200&q=80'
+  const othersRatings = ratings.filter(r => r.user_id !== user?.id)
+  const hasMyRating = !!myRating && !editing
 
   return (
     <div className="detail-page">
@@ -29,11 +106,7 @@ export function PlaceDetail() {
         <ArrowLeft size={16} /> Volver
       </button>
 
-      {/* Hero photo */}
-      <div
-        className="detail-hero"
-        style={{ backgroundImage: `url(${photo})` }}
-      >
+      <div className="detail-hero" style={{ backgroundImage: `url(${photo})` }}>
         <div className="detail-hero-overlay" />
       </div>
 
@@ -46,15 +119,9 @@ export function PlaceDetail() {
               <h1 className="detail-name">{place.name}</h1>
               <div className="detail-meta">
                 <span><MapPin size={13} /> {place.city}, {place.country}</span>
-                {place.visit_date && (
-                  <span><Calendar size={13} /> {formatDate(place.visit_date)}</span>
-                )}
-                {place.price_level > 0 && (
-                  <span><DollarSign size={13} /> {priceLabel(place.price_level)}</span>
-                )}
-                {place.would_return && (
-                  <span className="would-return-badge"><RotateCcw size={11} /> Volveríamos</span>
-                )}
+                {place.visit_date && <span><Calendar size={13} /> {formatDate(place.visit_date)}</span>}
+                {place.price_level > 0 && <span><DollarSign size={13} /> {priceLabel(place.price_level)}</span>}
+                {place.would_return && <span className="would-return-badge"><RotateCcw size={11} /> Volveríamos</span>}
               </div>
             </div>
 
@@ -64,46 +131,114 @@ export function PlaceDetail() {
                   <Star size={20} fill="currentColor" />
                   <span>{place.rating_avg.toFixed(1)}</span>
                 </div>
-                <p>Nuestra calificación</p>
-                <div className="detail-rating-pair">
-                  <div className="rating-person">
-                    <div className="person-avatar" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&q=80)' }} />
-                    <div>
-                      <span className="person-label">Él</span>
-                      <strong>{place.rating_him.toFixed(1)}</strong>
-                    </div>
-                  </div>
-                  <div className="rating-divider" />
-                  <div className="rating-person">
-                    <div className="person-avatar" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1494790108755-2616b612b786?w=60&q=80)' }} />
-                    <div>
-                      <span className="person-label">Ella</span>
-                      <strong>{place.rating_her.toFixed(1)}</strong>
-                    </div>
-                  </div>
-                </div>
+                <p>{ratings.length} {ratings.length === 1 ? 'calificación' : 'calificaciones'}</p>
               </div>
             )}
           </div>
 
-          {/* Category ratings */}
-          {place.rating_avg > 0 && (
-            <div className="detail-categories">
-              {categoryRatings.map((cat, i) => (
-                <div key={cat} className="category-item">
-                  <span>{cat}</span>
-                  <div className="stars">
-                    {[1,2,3,4,5].map(n => (
-                      <Star
-                        key={n}
-                        size={12}
-                        fill={n <= Math.round((place.rating_avg + i * 0.1) / 1) ? 'currentColor' : 'none'}
-                      />
-                    ))}
-                  </div>
+          {/* My rating */}
+          <section className="detail-section rating-section">
+            <h2>Tu calificación</h2>
+
+            {hasMyRating ? (
+              <div className="my-rating-display">
+                <div className="my-rating-stars">
+                  {[1,2,3,4,5].map(n => (
+                    <Star key={n} size={18} fill={n <= myRating.rating ? 'currentColor' : 'none'} />
+                  ))}
+                  <span>{myRating.rating}.0</span>
                 </div>
-              ))}
-            </div>
+                {myRating.comment && <p className="my-rating-comment">"{myRating.comment}"</p>}
+                <div className="my-rating-actions">
+                  <button className="rating-edit-btn" onClick={() => setEditing(true)}>
+                    <Pencil size={13} /> Editar
+                  </button>
+                  <button className="rating-delete-btn" onClick={handleDeleteRating}>
+                    <Trash2 size={13} /> Eliminar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="rating-form">
+                <StarPicker value={myStars} onChange={setMyStars} />
+                <textarea
+                  className="rating-comment-input"
+                  placeholder="¿Qué te pareció? (opcional)"
+                  value={myComment}
+                  onChange={e => setMyComment(e.target.value)}
+                  rows={2}
+                />
+                {saveMsg && (
+                  <p className={`rating-save-msg ${saveMsg.startsWith('Error') ? 'error' : 'ok'}`}>
+                    {saveMsg}
+                  </p>
+                )}
+                <button
+                  className="btn-save-rating"
+                  onClick={handleSaveRating}
+                  disabled={myStars === 0 || saving}
+                >
+                  {saving ? <span className="auth-spinner" /> : '✦ Guardar calificación'}
+                </button>
+              </div>
+            )}
+
+            {editing && (
+              <div className="rating-form">
+                <StarPicker value={myStars} onChange={setMyStars} />
+                <textarea
+                  className="rating-comment-input"
+                  placeholder="¿Qué te pareció? (opcional)"
+                  value={myComment}
+                  onChange={e => setMyComment(e.target.value)}
+                  rows={2}
+                />
+                {saveMsg && (
+                  <p className={`rating-save-msg ${saveMsg.startsWith('Error') ? 'error' : 'ok'}`}>
+                    {saveMsg}
+                  </p>
+                )}
+                <div className="rating-form-actions">
+                  <button className="btn-save-rating" onClick={handleSaveRating} disabled={myStars === 0 || saving}>
+                    {saving ? <span className="auth-spinner" /> : 'Actualizar'}
+                  </button>
+                  <button className="btn-cancel-rating" onClick={() => { setEditing(false); setMyStars(myRating?.rating || 0); setMyComment(myRating?.comment || '') }}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Other ratings */}
+          {!ratingsLoading && othersRatings.length > 0 && (
+            <section className="detail-section">
+              <h2>Lo que dijeron</h2>
+              <div className="ratings-list">
+                {othersRatings.map(r => (
+                  <div key={r.id} className="rating-card">
+                    <div className="rating-card-avatar">
+                      {r.profile?.avatar_url
+                        ? <div className="rc-avatar" style={{ backgroundImage: `url(${r.profile.avatar_url})` }} />
+                        : <div className="rc-avatar rc-avatar-placeholder"><User size={14} /></div>
+                      }
+                    </div>
+                    <div className="rating-card-body">
+                      <div className="rating-card-top">
+                        <span className="rating-card-name">{r.profile?.display_name || 'Usuario'}</span>
+                        <div className="rating-card-stars">
+                          {[1,2,3,4,5].map(n => (
+                            <Star key={n} size={12} fill={n <= r.rating ? 'currentColor' : 'none'} />
+                          ))}
+                          <span>{r.rating}.0</span>
+                        </div>
+                      </div>
+                      {r.comment && <p className="rating-card-comment">"{r.comment}"</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
 
           {/* Story */}
@@ -113,52 +248,18 @@ export function PlaceDetail() {
               <p className="detail-story">{place.story}</p>
             </section>
           )}
-
-          {/* Comments */}
-          {(place.comment_him || place.comment_her) && (
-            <section className="detail-section">
-              <div className="comments-grid">
-                {place.comment_him && (
-                  <div className="comment-card">
-                    <div className="comment-avatar" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&q=80)' }} />
-                    <div>
-                      <span className="comment-label">Lo que dijo él</span>
-                      <p>"{place.comment_him}"</p>
-                      {place.rating_him > 0 && (
-                        <div className="comment-rating"><Star size={11} fill="currentColor" /> {place.rating_him.toFixed(1)}</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {place.comment_her && (
-                  <div className="comment-card">
-                    <div className="comment-avatar" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1494790108755-2616b612b786?w=60&q=80)' }} />
-                    <div>
-                      <span className="comment-label">Lo que dijo ella</span>
-                      <p>"{place.comment_her}"</p>
-                      {place.rating_her > 0 && (
-                        <div className="comment-rating"><Star size={11} fill="currentColor" /> {place.rating_her.toFixed(1)}</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
         </div>
 
-        {/* Photo gallery sidebar */}
+        {/* Gallery sidebar */}
         {place.photos.length > 0 && (
           <aside className="detail-gallery">
             <h3>Galería</h3>
-            {place.photos.map((photo, i) => (
-              <div key={i} className="gallery-photo" style={{ backgroundImage: `url(${photo})` }} />
+            {place.photos.map((p, i) => (
+              <div key={i} className="gallery-photo" style={{ backgroundImage: `url(${p})` }} />
             ))}
             {place.tags.length > 0 && (
               <div className="detail-tags">
-                {place.tags.map(tag => (
-                  <span key={tag} className="tag">{tag}</span>
-                ))}
+                {place.tags.map(tag => <span key={tag} className="tag">{tag}</span>)}
               </div>
             )}
           </aside>
