@@ -30,7 +30,7 @@ export function Login() {
   return (
     <div className="auth-page">
       <div className="auth-visual">
-        <div className="auth-visual-bg" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1522199710521-72d69614c702?w=1200&q=80)' }} />
+        <div className="auth-visual-bg" style={{ backgroundImage: 'url(https://i.pinimg.com/1200x/1f/9c/a6/1f9ca61b7124efe5c635099483e54c6d.jpg)' }} />
         <div className="auth-visual-overlay" />
         <div className="auth-visual-content">
           <div className="auth-logo">
