@@ -11,14 +11,26 @@ export function Home() {
   const cities = [...new Set(visited.map(p => p.city))].length
   const restaurants = visited.filter(p => p.type === 'restaurante').length
   const trips = visited.filter(p => p.type === 'ciudad' || p.type === 'pueblo').length
-  const recent = [...visited].sort((a, b) => b.visit_date.localeCompare(a.visit_date)).slice(0, 4)
+  const recent = [...visited]
+    .sort((a, b) => b.visit_date.localeCompare(a.visit_date))
+    .slice(0, 4)
+
+  // Mejor calificado — real
+  const bestRated = visited.length > 0
+    ? [...visited].sort((a, b) => b.rating_avg - a.rating_avg)[0]
+    : null
+
+  // Primera cita — el lugar visitado más antiguo
+  const firstPlace = visited.length > 0
+    ? [...visited].filter(p => p.visit_date).sort((a, b) => a.visit_date.localeCompare(b.visit_date))[0]
+    : null
 
   return (
     <div className="home">
       {/* Hero */}
       <section className="hero">
         <div className="hero-image" style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-1522199710521-72d69614c702?w=1600&q=80)'
+          backgroundImage: 'url(https://i.pinimg.com/1200x/90/ff/b9/90ffb9b1b163b494575538e05a209f21.jpg)'
         }}>
           <div className="hero-overlay" />
           <div className="hero-content">
@@ -66,12 +78,6 @@ export function Home() {
           <Link to="/mapa" className="see-all">Ver mapa completo <ArrowRight size={13} /></Link>
         </div>
         <div className="map-preview">
-          <img
-            src="https://api.mapbox.com/styles/v1/mapbox/light-v11/static/-74.0721,5.0,4.5,0/900x320@2x?access_token=pk.placeholder"
-            alt="Mapa de nuestra senda"
-            className="map-fallback-img"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-          />
           <div className="map-placeholder">
             <div className="map-bg" />
             {visited.filter(p => p.lat).map(p => (
@@ -97,46 +103,82 @@ export function Home() {
       </section>
 
       {/* Recent places */}
-      <section className="section">
-        <div className="section-header">
-          <div>
-            <h2 className="section-title">Últimas huellas</h2>
-            <p className="section-sub">Los lugares que hemos visitado recientemente.</p>
+      {recent.length > 0 && (
+        <section className="section">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title">Últimas huellas</h2>
+              <p className="section-sub">Los lugares que hemos visitado recientemente.</p>
+            </div>
+            <Link to="/lugares" className="see-all">Ver todos <ArrowRight size={13} /></Link>
           </div>
-          <Link to="/lugares" className="see-all">Ver todos <ArrowRight size={13} /></Link>
-        </div>
-        <div className="cards-grid">
-          {recent.map(place => (
-            <PlaceCard key={place.id} place={place} />
-          ))}
-        </div>
-      </section>
+          <div className="cards-grid">
+            {recent.map(place => (
+              <PlaceCard key={place.id} place={place} />
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Highlights */}
-      <section className="section highlights">
-        <div className="highlight-card" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1583682064285-79b3d7bcf5b5?w=800&q=80)' }}>
-          <div className="highlight-overlay" />
-          <div className="highlight-body">
-            <span className="highlight-label">Mejor calificado</span>
-            <h3>Cartagena</h3>
-            <div className="highlight-rating"><Star size={13} fill="currentColor" /> 4.9</div>
+      {/* Highlights — solo si hay datos reales */}
+      {(bestRated || firstPlace) && (
+        <section className="section highlights">
+          {bestRated && (
+            <Link to={`/lugares/${bestRated.id}`} className="highlight-card" style={{
+              backgroundImage: bestRated.photos[0] ? `url(${bestRated.photos[0]})` : 'none',
+              background: !bestRated.photos[0] ? 'var(--forest)' : undefined,
+            }}>
+              <div className="highlight-overlay" />
+              <div className="highlight-body">
+                <span className="highlight-label">Mejor calificado</span>
+                <h3>{bestRated.name}</h3>
+                {bestRated.rating_avg > 0 && (
+                  <div className="highlight-rating">
+                    <Star size={13} fill="currentColor" /> {bestRated.rating_avg.toFixed(1)}
+                  </div>
+                )}
+              </div>
+            </Link>
+          )}
+
+          {firstPlace && (
+            <Link to={`/lugares/${firstPlace.id}`} className="highlight-card" style={{
+              backgroundImage: firstPlace.photos[0] ? `url(${firstPlace.photos[0]})` : 'none',
+              background: !firstPlace.photos[0] ? 'var(--olive)' : undefined,
+            }}>
+              <div className="highlight-overlay" />
+              <div className="highlight-body">
+                <span className="highlight-label">El principio</span>
+                <h3>{firstPlace.name}</h3>
+                {firstPlace.visit_date && (
+                  <div className="highlight-rating" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                    {new Date(firstPlace.visit_date + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </div>
+                )}
+              </div>
+            </Link>
+          )}
+
+          <div className="highlight-card highlight-cta">
+            <div className="highlight-cta-content">
+              <p>¿A dónde vamos después?</p>
+              <Link to="/proximos" className="btn-primary">Ver próximas sendas</Link>
+            </div>
           </div>
-        </div>
-        <div className="highlight-card" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80)' }}>
-          <div className="highlight-overlay" />
-          <div className="highlight-body">
-            <span className="highlight-label">Primera cita</span>
-            <h3>La Trattoria</h3>
-            <div className="highlight-rating"><Star size={13} fill="currentColor" /> 4.8</div>
+        </section>
+      )}
+
+      {/* Empty state */}
+      {visited.length === 0 && (
+        <section className="section home-empty">
+          <div className="home-empty-inner">
+            <span className="home-empty-icon">✦</span>
+            <h2>Aún no hay huellas en vuestra senda</h2>
+            <p>Empiecen agregando el primer lugar que han recorrido juntos.</p>
+            <Link to="/agregar" className="btn-primary">Agregar primer lugar</Link>
           </div>
-        </div>
-        <div className="highlight-card highlight-cta">
-          <div className="highlight-cta-content">
-            <p>¿A dónde vamos después?</p>
-            <Link to="/proximos" className="btn-primary">Ver próximas sendas</Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   )
 }
