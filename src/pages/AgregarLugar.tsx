@@ -37,7 +37,7 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
 }
 
 export function AgregarLugar() {
-  const { upsertRating } = usePlaces()
+  const { upsertRating, refresh } = usePlaces()
   const { user, profile } = useAuth()
   const navigate = useNavigate()
 
@@ -100,13 +100,11 @@ export function AgregarLugar() {
 
     setUploading(true)
     try {
-      // Solo enviamos los campos que existen en la BD actual
       const payload = {
         name: form.name,
         type: form.type as PlaceType,
         city: form.city,
         country: form.country,
-        // null en vez de '' — Postgres rechaza string vacío en columna DATE
         visit_date: form.visit_date || null,
         price_level: form.price_level,
         would_return: form.would_return,
@@ -120,7 +118,6 @@ export function AgregarLugar() {
         budget: null,
         planned_year: null,
         tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-        // created_by solo si el usuario está autenticado
         ...(user?.id ? { created_by: user.id } : {}),
       }
 
@@ -132,24 +129,23 @@ export function AgregarLugar() {
 
       if (insertError) throw insertError
 
-      // Subir fotos si las hay
       if (photos.length > 0) {
         const photoUrls = await uploadPhotos(newPlace.id)
         if (photoUrls.length > 0) {
           await supabase.from('places').update({ photos: photoUrls }).eq('id', newPlace.id)
-          newPlace.photos = photoUrls
         }
       }
 
-      // Guardar calificación si se dio
       if (form.myRating > 0) {
         await upsertRating(newPlace.id, form.myRating, form.myComment || null)
       }
 
+      // Refresca el contexto para que Home y Lugares vean el nuevo lugar sin recargar
+      await refresh()
+
       setSubmitted(true)
       setTimeout(() => navigate(`/lugares/${newPlace.id}`), 1200)
     } catch (err: unknown) {
-      // Mostrar el mensaje real de Supabase, no uno genérico
       console.error('Error al guardar lugar:', err)
       const msg =
         err && typeof err === 'object' && 'message' in err

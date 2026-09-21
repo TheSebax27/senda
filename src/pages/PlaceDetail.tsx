@@ -27,9 +27,32 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
   )
 }
 
+// Modal de confirmación para eliminar el lugar completo
+function DeletePlaceModal({ name, onConfirm, onCancel }: {
+  name: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal-icon">🗑️</div>
+        <h3 className="modal-title">¿Eliminar esta huella?</h3>
+        <p className="modal-desc">
+          Vas a eliminar <strong>{name}</strong> de vuestra senda. Esta acción no se puede deshacer.
+        </p>
+        <div className="modal-actions">
+          <button className="modal-btn-cancel" onClick={onCancel}>Cancelar</button>
+          <button className="modal-btn-confirm" onClick={onConfirm}>Sí, eliminar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function PlaceDetail() {
   const { id } = useParams()
-  const { places, getRatings, upsertRating, deleteRating } = usePlaces()
+  const { places, getRatings, upsertRating, deleteRating, deletePlace } = usePlaces()
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -45,6 +68,10 @@ export function PlaceDetail() {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
+
+  // Eliminar lugar
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -87,6 +114,18 @@ export function PlaceDetail() {
     setEditing(false)
   }
 
+  const handleDeletePlace = async () => {
+    if (!id) return
+    setDeleting(true)
+    try {
+      await deletePlace(id)
+      navigate('/lugares', { replace: true })
+    } catch {
+      setDeleting(false)
+      setShowDeleteModal(false)
+    }
+  }
+
   if (!place) {
     return (
       <div className="not-found">
@@ -102,9 +141,29 @@ export function PlaceDetail() {
 
   return (
     <div className="detail-page">
-      <button className="detail-back" onClick={() => navigate(-1)}>
-        <ArrowLeft size={16} /> Volver
-      </button>
+      {/* Modal de confirmación */}
+      {showDeleteModal && (
+        <DeletePlaceModal
+          name={place.name}
+          onConfirm={handleDeletePlace}
+          onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
+
+      <div className="detail-topbar">
+        <button className="detail-back" onClick={() => navigate(-1)}>
+          <ArrowLeft size={16} /> Volver
+        </button>
+        <button
+          className="detail-delete-place-btn"
+          onClick={() => setShowDeleteModal(true)}
+          disabled={deleting}
+          title="Eliminar esta huella"
+        >
+          <Trash2 size={15} />
+          {deleting ? 'Eliminando…' : 'Eliminar huella'}
+        </button>
+      </div>
 
       <div className="detail-hero" style={{ backgroundImage: `url(${photo})` }}>
         <div className="detail-hero-overlay" />

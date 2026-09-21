@@ -548,3 +548,112 @@
   .detail-categories { flex-wrap: wrap; }
   .category-item { min-width: 33%; border-bottom: 1px solid var(--border); }
 }
+
+/* ── Topbar con botón eliminar ─────────────────────── */
+.detail-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem 0;
+}
+
+.detail-delete-place-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #c0392b;
+  background: none;
+  border: 1px solid #e8c5c3;
+  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.detail-delete-place-btn:hover {
+  background: #fdf0ef;
+  border-color: #c0392b;
+}
+.detail-delete-place-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Modal de confirmación ─────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-box {
+  background: var(--ivory, #faf8f5);
+  border-radius: 16px;
+  padding: 2rem 2rem 1.75rem;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  animation: modal-in 0.2s ease;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.modal-title {
+  font-family: var(--font-serif, serif);
+  font-size: 1.35rem;
+  color: var(--ink, #1a1a1a);
+  margin: 0 0 0.5rem;
+}
+
+.modal-desc {
+  font-size: 0.9rem;
+  color: var(--muted, #666);
+  line-height: 1.55;
+  margin: 0 0 1.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.modal-btn-cancel {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border, #e0ddd8);
+  background: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.modal-btn-cancel:hover { background: var(--bg-subtle, #f5f3ef); }
+
+.modal-btn-confirm {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  border: none;
+  background: #c0392b;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.modal-btn-confirm:hover { background: #a93226; }
