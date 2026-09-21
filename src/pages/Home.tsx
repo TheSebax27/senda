@@ -12,7 +12,7 @@ export function Home() {
   const restaurants = visited.filter(p => p.type === 'restaurante').length
   const trips = visited.filter(p => p.type === 'ciudad' || p.type === 'pueblo').length
   const recent = [...visited]
-    .sort((a, b) => b.visit_date.localeCompare(a.visit_date))
+    .sort((a, b) => (b.visit_date ?? '').localeCompare(a.visit_date ?? ''))
     .slice(0, 4)
 
   // Mejor calificado — real
@@ -22,7 +22,7 @@ export function Home() {
 
   // Primera cita — el lugar visitado más antiguo
   const firstPlace = visited.length > 0
-    ? [...visited].filter(p => p.visit_date).sort((a, b) => a.visit_date.localeCompare(b.visit_date))[0]
+    ? [...visited].filter(p => p.visit_date).sort((a, b) => (a.visit_date ?? '').localeCompare(b.visit_date ?? ''))[0]
     : null
 
   return (

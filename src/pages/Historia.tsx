@@ -17,7 +17,7 @@ export function Historia() {
 
   const visited = [...places]
     .filter(p => !p.is_planned && p.visit_date)
-    .sort((a, b) => (a.visit_date as string).localeCompare(b.visit_date as string))
+    .sort((a, b) => (a.visit_date ?? '').localeCompare(b.visit_date ?? ''))
 
   return (
     <div className="historia-page">
@@ -52,7 +52,7 @@ export function Historia() {
                     </div>
                   )}
                   <div className="timeline-body">
-                    <span className="timeline-date">{formatDate(place.visit_date)}</span>
+                    <span className="timeline-date">{formatDate(place.visit_date ?? '')}</span>
                     <h3 className="timeline-event-title">{place.name}</h3>
                     <p className="timeline-place">
                       <MapPin size={11} /> {place.city}, {place.country}
