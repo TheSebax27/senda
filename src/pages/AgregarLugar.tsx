@@ -4,7 +4,7 @@ import { Star, Upload, X, ImagePlus } from 'lucide-react'
 import { usePlaces } from '../context/PlacesContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import type { PlaceType, PlaceInsert } from '../types'
+import type { PlaceType } from '../types'
 import './AgregarLugar.css'
 
 const placeTypes: { value: PlaceType; label: string }[] = [
@@ -100,29 +100,30 @@ export function AgregarLugar() {
 
     setUploading(true)
     try {
-      // Insert place first (sin fotos) para obtener el id
-      const payload: PlaceInsert = {
+      // Solo enviamos los campos que existen en la BD actual
+      const payload = {
         name: form.name,
         type: form.type as PlaceType,
         city: form.city,
         country: form.country,
+        // null en vez de '' — Postgres rechaza string vacío en columna DATE
         visit_date: form.visit_date || null,
         price_level: form.price_level,
         would_return: form.would_return,
         story: form.story || null,
         lat: form.lat,
         lng: form.lng,
-        photos: [],
+        photos: [] as string[],
         is_favorite: false,
         is_planned: false,
         priority: null,
         budget: null,
         planned_year: null,
         tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-        created_by: user?.id ?? null,
+        // created_by solo si el usuario está autenticado
+        ...(user?.id ? { created_by: user.id } : {}),
       }
 
-      // Insert and get id
       const { data: newPlace, error: insertError } = await supabase
         .from('places')
         .insert(payload)
@@ -131,17 +132,16 @@ export function AgregarLugar() {
 
       if (insertError) throw insertError
 
-      // Upload photos
-      let photoUrls: string[] = []
+      // Subir fotos si las hay
       if (photos.length > 0) {
-        photoUrls = await uploadPhotos(newPlace.id)
+        const photoUrls = await uploadPhotos(newPlace.id)
         if (photoUrls.length > 0) {
           await supabase.from('places').update({ photos: photoUrls }).eq('id', newPlace.id)
           newPlace.photos = photoUrls
         }
       }
 
-      // Save my rating if provided
+      // Guardar calificación si se dio
       if (form.myRating > 0) {
         await upsertRating(newPlace.id, form.myRating, form.myComment || null)
       }
@@ -149,7 +149,13 @@ export function AgregarLugar() {
       setSubmitted(true)
       setTimeout(() => navigate(`/lugares/${newPlace.id}`), 1200)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al guardar el lugar.')
+      // Mostrar el mensaje real de Supabase, no uno genérico
+      console.error('Error al guardar lugar:', err)
+      const msg =
+        err && typeof err === 'object' && 'message' in err
+          ? (err as { message: string }).message
+          : JSON.stringify(err)
+      setError(msg)
     } finally {
       setUploading(false)
     }
