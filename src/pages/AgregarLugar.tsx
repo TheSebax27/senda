@@ -106,7 +106,7 @@ export function AgregarLugar() {
         type: form.type as PlaceType,
         city: form.city,
         country: form.country,
-        visit_date: form.visit_date || '',
+        visit_date: form.visit_date || null,
         price_level: form.price_level,
         would_return: form.would_return,
         story: form.story || null,

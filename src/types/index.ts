@@ -8,7 +8,7 @@ export interface Place {
   type: PlaceType
   city: string
   country: string
-  visit_date: string
+  visit_date: string | null
   rating_avg: number   // calculado desde ratings table
   price_level: number
   would_return: boolean | null
