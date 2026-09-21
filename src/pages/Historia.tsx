@@ -17,7 +17,7 @@ export function Historia() {
 
   const visited = [...places]
     .filter(p => !p.is_planned && p.visit_date)
-    .sort((a, b) => a.visit_date.localeCompare(b.visit_date))
+    .sort((a, b) => (a.visit_date as string).localeCompare(b.visit_date as string))
 
   return (
     <div className="historia-page">

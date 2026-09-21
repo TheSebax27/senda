@@ -44,7 +44,7 @@ export function PlaceCard({ place, size = 'normal' }: Props) {
   )
 }
 
-function formatDate(dateStr: string) {
+function formatDate(dateStr: string | null) {
   if (!dateStr) return ''
   const d = new Date(dateStr + 'T12:00:00')
   return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
