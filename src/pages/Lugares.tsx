@@ -2,24 +2,21 @@ import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { usePlaces } from '../context/PlacesContext'
 import { PlaceCard } from '../components/PlaceCard'
-import type { PlaceType } from '../types'
 import './Lugares.css'
-
-const filters: { label: string; value: 'all' | PlaceType }[] = [
-  { label: 'Todos', value: 'all' },
-  { label: 'Restaurantes', value: 'restaurante' },
-  { label: 'Ciudades', value: 'ciudad' },
-  { label: 'Pueblos', value: 'pueblo' },
-  { label: 'Hoteles', value: 'hotel' },
-  { label: 'Experiencias', value: 'experiencia' },
-]
 
 export function Lugares() {
   const { places } = usePlaces()
   const [query, setQuery] = useState('')
-  const [activeFilter, setActiveFilter] = useState<'all' | PlaceType>('all')
+  const [activeFilter, setActiveFilter] = useState<'all' | string>('all')
 
   const visited = places.filter(p => !p.is_planned)
+
+  // Build filter list from actual types that exist in the data
+  const usedTypes = [...new Set(visited.map(p => p.type).filter(Boolean))].sort()
+  const filters = [
+    { label: 'Todos', value: 'all' as const },
+    ...usedTypes.map(t => ({ label: t.charAt(0).toUpperCase() + t.slice(1), value: t })),
+  ]
 
   const filtered = visited.filter(p => {
     const matchType = activeFilter === 'all' || p.type === activeFilter

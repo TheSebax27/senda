@@ -102,14 +102,25 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
       comment: comment || null,
     }
 
-    // Upsert: si el usuario ya calificó este lugar, actualiza; si no, inserta
-    const { error } = await supabase
+    // Try INSERT first; if unique violation, do UPDATE
+    const { error: insertError } = await supabase
       .from('ratings')
-      .upsert(payload, { onConflict: 'place_id,user_id' })
+      .insert(payload)
 
-    if (error) return { error: error.message }
+    if (insertError) {
+      // 23505 = unique_violation (ya existe una calificación de este usuario)
+      if (insertError.code === '23505') {
+        const { error: updateError } = await supabase
+          .from('ratings')
+          .update({ rating, comment: comment || null })
+          .eq('place_id', placeId)
+          .eq('user_id', user.id)
+        if (updateError) return { error: updateError.message }
+      } else {
+        return { error: insertError.message }
+      }
+    }
 
-    // Recalcular rating_avg en el lugar
     await recalcPlaceAvg(placeId)
     return { error: null }
   }

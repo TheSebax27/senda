@@ -1,4 +1,7 @@
-export type PlaceType = 'restaurante' | 'ciudad' | 'pueblo' | 'hotel' | 'experiencia'
+export type PlaceType = string
+export const DEFAULT_PLACE_TYPES: PlaceType[] = [
+  'restaurante', 'cafetería', 'bar', 'ciudad', 'pueblo', 'hotel', 'experiencia', 'playa',
+]
 export type Priority = 'alta' | 'media' | 'baja'
 
 export interface Place {

@@ -217,6 +217,7 @@ export function PlaceDetail() {
               </div>
             ) : (
               <div className="rating-form">
+                <p className="rating-hint">{myStars === 0 ? 'Toca las estrellas para calificar' : `${myStars} de 5`}</p>
                 <StarPicker value={myStars} onChange={setMyStars} />
                 <textarea
                   className="rating-comment-input"
@@ -226,9 +227,9 @@ export function PlaceDetail() {
                   rows={2}
                 />
                 {saveMsg && (
-                  <p className={`rating-save-msg ${saveMsg.startsWith('Error') ? 'error' : 'ok'}`}>
+                  <div className={`rating-save-banner ${saveMsg.startsWith('Error') ? 'error' : 'ok'}`}>
                     {saveMsg}
-                  </p>
+                  </div>
                 )}
                 <button
                   className="btn-save-rating"
@@ -242,6 +243,7 @@ export function PlaceDetail() {
 
             {editing && (
               <div className="rating-form">
+                <p className="rating-hint">{myStars === 0 ? 'Toca las estrellas para calificar' : `${myStars} de 5`}</p>
                 <StarPicker value={myStars} onChange={setMyStars} />
                 <textarea
                   className="rating-comment-input"
@@ -251,9 +253,9 @@ export function PlaceDetail() {
                   rows={2}
                 />
                 {saveMsg && (
-                  <p className={`rating-save-msg ${saveMsg.startsWith('Error') ? 'error' : 'ok'}`}>
+                  <div className={`rating-save-banner ${saveMsg.startsWith('Error') ? 'error' : 'ok'}`}>
                     {saveMsg}
-                  </p>
+                  </div>
                 )}
                 <div className="rating-form-actions">
                   <button className="btn-save-rating" onClick={handleSaveRating} disabled={myStars === 0 || saving}>

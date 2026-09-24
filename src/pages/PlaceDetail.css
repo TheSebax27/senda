@@ -334,14 +334,15 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--border);
-  padding: 2px;
+  color: #ccc6bc;
+  padding: 4px;
   transition: transform 0.1s, color 0.1s;
   display: flex;
+  touch-action: manipulation;
 }
 
 .star-pick-btn.active { color: var(--terracotta); }
-.star-pick-btn:hover { transform: scale(1.15); }
+.star-pick-btn:hover, .star-pick-btn:active { transform: scale(1.2); color: var(--terracotta); }
 
 .rating-comment-input {
   width: 100%;
@@ -396,13 +397,30 @@
   gap: 0.625rem;
 }
 
-.rating-save-msg {
+.rating-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  margin: 0 0 0.5rem;
+}
+
+.rating-save-banner {
   font-size: 0.8rem;
   font-family: var(--font-sans);
-  margin: 0 0 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
 }
-.rating-save-msg.ok { color: #166534; }
-.rating-save-msg.error { color: #991B1B; }
+.rating-save-banner.ok {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+.rating-save-banner.error {
+  background: #fef2f2;
+  color: #991B1B;
+  border: 1px solid #fecaca;
+}
 
 /* My rating display */
 .my-rating-display {

@@ -1,19 +1,76 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Star, Upload, X, ImagePlus } from 'lucide-react'
+import { Star, Upload, X, ImagePlus, Plus } from 'lucide-react'
 import { usePlaces } from '../context/PlacesContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { DEFAULT_PLACE_TYPES } from '../types'
 import type { PlaceType } from '../types'
 import './AgregarLugar.css'
 
-const placeTypes: { value: PlaceType; label: string }[] = [
-  { value: 'restaurante', label: 'Restaurante' },
-  { value: 'ciudad', label: 'Ciudad' },
-  { value: 'pueblo', label: 'Pueblo' },
-  { value: 'hotel', label: 'Hotel' },
-  { value: 'experiencia', label: 'Experiencia' },
-]
+function TypeSelector({ value, onChange, existingTypes }: {
+  value: PlaceType
+  onChange: (v: PlaceType) => void
+  existingTypes: PlaceType[]
+}) {
+  const [custom, setCustom] = useState('')
+  const [showCustom, setShowCustom] = useState(false)
+
+  // Merge defaults + types already used, deduplicate, preserve order
+  const allTypes = [...new Set([...DEFAULT_PLACE_TYPES, ...existingTypes])]
+
+  const handleCustomSubmit = () => {
+    const val = custom.trim().toLowerCase()
+    if (!val) return
+    onChange(val)
+    setCustom('')
+    setShowCustom(false)
+  }
+
+  return (
+    <div className="type-selector">
+      <div className="type-chips">
+        {allTypes.map(t => (
+          <button
+            key={t}
+            type="button"
+            className={`type-chip ${value === t ? 'active' : ''}`}
+            onClick={() => onChange(t)}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+        <button
+          type="button"
+          className={`type-chip type-chip-add ${showCustom ? 'active' : ''}`}
+          onClick={() => { setShowCustom(v => !v); setCustom('') }}
+          title="Agregar tipo personalizado"
+        >
+          <Plus size={13} /> Otro
+        </button>
+      </div>
+      {showCustom && (
+        <div className="type-custom-row">
+          <input
+            type="text"
+            className="type-custom-input"
+            placeholder="Ej. mirador, galería, parque…"
+            value={custom}
+            onChange={e => setCustom(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCustomSubmit() } }}
+            autoFocus
+          />
+          <button type="button" className="type-custom-confirm" onClick={handleCustomSubmit} disabled={!custom.trim()}>
+            Agregar
+          </button>
+        </div>
+      )}
+      {value && !allTypes.includes(value) && (
+        <p className="type-selected-custom">Tipo: <strong>{value}</strong></p>
+      )}
+    </div>
+  )
+}
 
 function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hover, setHover] = useState(0)
@@ -37,8 +94,9 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
 }
 
 export function AgregarLugar() {
-  const { upsertRating, refresh } = usePlaces()
+  const { upsertRating, refresh, places } = usePlaces()
   const { user, profile } = useAuth()
+  const existingTypes = [...new Set(places.map(p => p.type).filter(Boolean))]
   const navigate = useNavigate()
 
   const [form, setForm] = useState({
@@ -179,18 +237,17 @@ export function AgregarLugar() {
           {/* Lugar */}
           <div className="form-section">
             <h3>¿Dónde estuvieron?</h3>
-            <div className="form-row">
-              <div className="form-group flex-2">
-                <label>Nombre del lugar</label>
-                <input type="text" placeholder="Ej. La Trattoria" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label>Tipo</label>
-                <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value as PlaceType }))}>
-                  <option value="">Selecciona un tipo</option>
-                  {placeTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label>Nombre del lugar</label>
+              <input type="text" placeholder="Ej. La Trattoria" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label>Categoría</label>
+              <TypeSelector
+                value={form.type}
+                onChange={v => setForm(p => ({ ...p, type: v }))}
+                existingTypes={existingTypes}
+              />
             </div>
             <div className="form-row">
               <div className="form-group">

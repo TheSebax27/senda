@@ -1,14 +1,6 @@
-import type { PlaceType } from '../types'
-
-export function typeLabel(type: PlaceType): string {
-  const map: Record<PlaceType, string> = {
-    restaurante: 'Restaurante',
-    ciudad: 'Ciudad',
-    pueblo: 'Pueblo',
-    hotel: 'Hotel',
-    experiencia: 'Experiencia',
-  }
-  return map[type] || type
+export function typeLabel(type: string): string {
+  if (!type) return ''
+  return type.charAt(0).toUpperCase() + type.slice(1)
 }
 
 export function priceLabel(level: number): string {
