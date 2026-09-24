@@ -150,20 +150,18 @@ export function PlaceDetail() {
         />
       )}
 
-      <div className="detail-topbar">
-        <button className="detail-back" onClick={() => navigate(-1)}>
-          <ArrowLeft size={16} /> Volver
-        </button>
-        <button
-          className="detail-delete-place-btn"
-          onClick={() => setShowDeleteModal(true)}
-          disabled={deleting}
-          title="Eliminar esta huella"
-        >
-          <Trash2 size={15} />
-          {deleting ? 'Eliminando…' : 'Eliminar huella'}
-        </button>
-      </div>
+      <button className="detail-back" onClick={() => navigate(-1)}>
+        <ArrowLeft size={16} /> Volver
+      </button>
+      <button
+        className="detail-delete-place-btn"
+        onClick={() => setShowDeleteModal(true)}
+        disabled={deleting}
+        title="Eliminar esta huella"
+      >
+        <Trash2 size={15} />
+        {deleting ? 'Eliminando…' : 'Eliminar huella'}
+      </button>
 
       <div className="detail-hero" style={{ backgroundImage: `url(${photo})` }}>
         <div className="detail-hero-overlay" />

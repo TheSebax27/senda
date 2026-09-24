@@ -549,25 +549,24 @@
   .category-item { min-width: 33%; border-bottom: 1px solid var(--border); }
 }
 
-/* ── Topbar con botón eliminar ─────────────────────── */
-.detail-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem 0;
-}
-
+/* ── Botón eliminar (absoluto sobre el hero, esquina derecha) ── */
 .detail-delete-place-btn {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   color: #c0392b;
-  background: none;
+  background: rgba(250,248,244,0.9);
   border: 1px solid #e8c5c3;
-  border-radius: 8px;
-  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  padding: 0.4rem 0.875rem;
   cursor: pointer;
+  backdrop-filter: blur(8px);
+  font-family: var(--font-sans);
   transition: background 0.15s, border-color 0.15s;
 }
 .detail-delete-place-btn:hover {

@@ -15,14 +15,18 @@ export function Home() {
     .sort((a, b) => (b.visit_date ?? '').localeCompare(a.visit_date ?? ''))
     .slice(0, 4)
 
-  // Mejor calificado — real
+  // Mejor calificado — solo si tiene foto
   const bestRated = visited.length > 0
-    ? [...visited].sort((a, b) => b.rating_avg - a.rating_avg)[0]
+    ? [...visited]
+        .filter(p => p.photos.length > 0 && p.rating_avg > 0)
+        .sort((a, b) => b.rating_avg - a.rating_avg)[0] ?? null
     : null
 
-  // Primera cita — el lugar visitado más antiguo
+  // Primera cita — el lugar visitado más antiguo, solo si tiene foto
   const firstPlace = visited.length > 0
-    ? [...visited].filter(p => p.visit_date).sort((a, b) => (a.visit_date ?? '').localeCompare(b.visit_date ?? ''))[0]
+    ? [...visited]
+        .filter(p => p.visit_date && p.photos.length > 0)
+        .sort((a, b) => (a.visit_date ?? '').localeCompare(b.visit_date ?? ''))[0] ?? null
     : null
 
   return (
