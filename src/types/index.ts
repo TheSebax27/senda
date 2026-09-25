@@ -59,3 +59,18 @@ export interface Revisit {
   }
 }
 export type RevisitInsert = Omit<Revisit, 'id' | 'created_at' | 'profile'>
+
+export interface Note {
+  id: string
+  created_at: string
+  updated_at: string
+  title: string
+  content: string
+  note_date: string | null
+  created_by: string | null
+  profile?: {
+    display_name: string
+    avatar_url: string | null
+  }
+}
+export type NoteInsert = Omit<Note, 'id' | 'created_at' | 'updated_at' | 'profile'>

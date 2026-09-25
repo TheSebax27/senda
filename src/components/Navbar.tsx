@@ -11,6 +11,8 @@ const navItems = [
   { label: 'Favoritos', path: '/favoritos' },
   { label: 'Historia', path: '/historia' },
   { label: 'Próximos', path: '/proximos' },
+  { label: 'Notas', path: '/notas' },
+  { label: 'Estadísticas', path: '/stats' },
 ]
 
 export function Navbar() {
