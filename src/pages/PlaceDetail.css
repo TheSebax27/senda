@@ -667,6 +667,80 @@
   line-height: 1.5;
 }
 
+/* ── Edit panel ────────────────────────────────────── */
+.edit-panel {
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+  padding: 2rem;
+}
+.edit-panel-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.edit-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.edit-panel-title {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: var(--text);
+  margin: 0;
+}
+.edit-panel-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  display: flex;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+.edit-panel-close:hover { color: var(--text); }
+
+.edit-fields { display: flex; flex-direction: column; gap: 1rem; }
+.edit-row { display: flex; gap: 0.875rem; flex-wrap: wrap; }
+
+.edit-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 140px;
+}
+.edit-group-lg { flex: 2; }
+
+.edit-group label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+}
+.edit-hint { opacity: 0.65; font-weight: 400; }
+
+.edit-group input,
+.edit-group textarea {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  color: var(--text);
+  background: var(--ivory);
+  outline: none;
+  transition: border-color 0.15s;
+  resize: vertical;
+}
+.edit-group input:focus,
+.edit-group textarea:focus { border-color: var(--forest); }
+
+.edit-panel-footer { display: flex; gap: 0.625rem; flex-wrap: wrap; }
+
 .not-found {
   padding: 4rem 2rem;
   text-align: center;
@@ -689,12 +763,35 @@
   .category-item { min-width: 33%; border-bottom: 1px solid var(--border); }
 }
 
-/* ── Botón eliminar (absoluto sobre el hero, esquina derecha) ── */
-.detail-delete-place-btn {
+/* ── Botones de propietario (editar + eliminar) sobre el hero ── */
+.detail-owner-actions {
   position: absolute;
   top: 1.25rem;
   right: 1.5rem;
   z-index: 10;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.detail-edit-place-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--forest);
+  background: rgba(250,248,244,0.9);
+  border: 1px solid rgba(42,68,48,0.35);
+  border-radius: 6px;
+  padding: 0.4rem 0.875rem;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  font-family: var(--font-sans);
+  transition: background 0.15s;
+}
+.detail-edit-place-btn:hover { background: var(--ivory); }
+
+.detail-delete-place-btn {
   display: flex;
   align-items: center;
   gap: 0.4rem;

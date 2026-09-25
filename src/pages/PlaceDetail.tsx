@@ -1,10 +1,12 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { ArrowLeft, MapPin, Star, RotateCcw, Calendar, DollarSign, Pencil, Trash2, User, RefreshCw } from 'lucide-react'
+import { ArrowLeft, MapPin, Star, RotateCcw, Calendar, DollarSign, Pencil, Trash2, User, RefreshCw, Check, X } from 'lucide-react'
 import { usePlaces } from '../context/PlacesContext'
 import { useAuth } from '../context/AuthContext'
 import { typeLabel, formatDate, priceLabel } from '../lib/utils'
-import type { Rating, Revisit } from '../types'
+import { TypeSelector } from '../components/TypeSelector'
+import type { Rating, Revisit, PlaceType } from '../types'
+import '../components/shared.css'
 import './PlaceDetail.css'
 
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -52,7 +54,7 @@ function DeletePlaceModal({ name, onConfirm, onCancel }: {
 
 export function PlaceDetail() {
   const { id } = useParams()
-  const { places, getRatings, upsertRating, deleteRating, deletePlace, getRevisits, addRevisit, deleteRevisit } = usePlaces()
+  const { places, getRatings, upsertRating, deleteRating, deletePlace, updatePlace, getRevisits, addRevisit, deleteRevisit } = usePlaces()
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -76,6 +78,24 @@ export function PlaceDetail() {
   const [revisitNote, setRevisitNote] = useState('')
   const [savingRevisit, setSavingRevisit] = useState(false)
   const [revisitMsg, setRevisitMsg] = useState<string | null>(null)
+
+  // Editar lugar
+  const [showEditPanel, setShowEditPanel] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: '',
+    type: '' as PlaceType,
+    city: '',
+    country: '',
+    visit_date: '',
+    story: '',
+    tags: '',
+    price_level: 2,
+    would_return: null as boolean | null,
+    lat: null as number | null,
+    lng: null as number | null,
+  })
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
 
   // Eliminar lugar
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -145,6 +165,52 @@ export function PlaceDetail() {
     setEditing(false)
   }
 
+  const openEdit = () => {
+    setEditForm({
+      name: place?.name ?? '',
+      type: place?.type ?? '',
+      city: place?.city ?? '',
+      country: place?.country ?? '',
+      visit_date: place?.visit_date ?? '',
+      story: place?.story ?? '',
+      tags: place?.tags?.join(', ') ?? '',
+      price_level: place?.price_level ?? 2,
+      would_return: place?.would_return ?? null,
+      lat: place?.lat ?? null,
+      lng: place?.lng ?? null,
+    })
+    setEditError(null)
+    setShowEditPanel(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!id || !editForm.name || !editForm.type || !editForm.city) {
+      setEditError('Nombre, categoría y ciudad son obligatorios.')
+      return
+    }
+    setSavingEdit(true)
+    setEditError(null)
+    try {
+      await updatePlace(id, {
+        name: editForm.name,
+        type: editForm.type,
+        city: editForm.city,
+        country: editForm.country,
+        visit_date: editForm.visit_date || null,
+        story: editForm.story || null,
+        tags: editForm.tags ? editForm.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        price_level: editForm.price_level,
+        would_return: editForm.would_return,
+        lat: editForm.lat,
+        lng: editForm.lng,
+      })
+      setShowEditPanel(false)
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : 'Error al guardar.')
+    }
+    setSavingEdit(false)
+  }
+
   const handleDeletePlace = async () => {
     if (!id) return
     setDeleting(true)
@@ -184,19 +250,132 @@ export function PlaceDetail() {
       <button className="detail-back" onClick={() => navigate(-1)}>
         <ArrowLeft size={16} /> Volver
       </button>
-      <button
-        className="detail-delete-place-btn"
-        onClick={() => setShowDeleteModal(true)}
-        disabled={deleting}
-        title="Eliminar esta huella"
-      >
-        <Trash2 size={15} />
-        {deleting ? 'Eliminando…' : 'Eliminar huella'}
-      </button>
+      {place.created_by === user?.id && (
+        <div className="detail-owner-actions">
+          <button
+            className="detail-edit-place-btn"
+            onClick={openEdit}
+            title="Editar este lugar"
+          >
+            <Pencil size={14} /> Editar
+          </button>
+          <button
+            className="detail-delete-place-btn"
+            onClick={() => setShowDeleteModal(true)}
+            disabled={deleting}
+            title="Eliminar esta huella"
+          >
+            <Trash2 size={15} />
+            {deleting ? 'Eliminando…' : 'Eliminar'}
+          </button>
+        </div>
+      )}
 
       <div className="detail-hero" style={{ backgroundImage: `url(${photo})` }}>
         <div className="detail-hero-overlay" />
       </div>
+
+      {/* Edit panel */}
+      {showEditPanel && (
+        <div className="edit-panel">
+          <div className="edit-panel-inner">
+            <div className="edit-panel-head">
+              <h2 className="edit-panel-title">Editar lugar</h2>
+              <button className="edit-panel-close" onClick={() => setShowEditPanel(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="edit-fields">
+              <div className="edit-row">
+                <div className="edit-group edit-group-lg">
+                  <label>Nombre</label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="edit-group">
+                <label>Categoría</label>
+                <TypeSelector
+                  value={editForm.type}
+                  onChange={v => setEditForm(p => ({ ...p, type: v }))}
+                  existingTypes={[...new Set(places.map(pl => pl.type).filter(Boolean))]}
+                />
+              </div>
+
+              <div className="edit-row">
+                <div className="edit-group">
+                  <label>Ciudad</label>
+                  <input type="text" value={editForm.city} onChange={e => setEditForm(p => ({ ...p, city: e.target.value }))} />
+                </div>
+                <div className="edit-group">
+                  <label>País</label>
+                  <input type="text" value={editForm.country} onChange={e => setEditForm(p => ({ ...p, country: e.target.value }))} />
+                </div>
+                <div className="edit-group">
+                  <label>Fecha de visita</label>
+                  <input type="date" value={editForm.visit_date} onChange={e => setEditForm(p => ({ ...p, visit_date: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="edit-row">
+                <div className="edit-group">
+                  <label>Precio</label>
+                  <div className="price-selector">
+                    {[1, 2, 3, 4].map(n => (
+                      <button key={n} type="button" className={`price-btn ${editForm.price_level === n ? 'active' : ''}`} onClick={() => setEditForm(p => ({ ...p, price_level: n }))}>
+                        {'$'.repeat(n)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="edit-group">
+                  <label>¿Volverían?</label>
+                  <div className="toggle-group">
+                    <button type="button" className={`toggle-btn ${editForm.would_return === true ? 'active' : ''}`} onClick={() => setEditForm(p => ({ ...p, would_return: true }))}>Sí</button>
+                    <button type="button" className={`toggle-btn ${editForm.would_return === null ? 'active' : ''}`} onClick={() => setEditForm(p => ({ ...p, would_return: null }))}>Tal vez</button>
+                    <button type="button" className={`toggle-btn ${editForm.would_return === false ? 'active' : ''}`} onClick={() => setEditForm(p => ({ ...p, would_return: false }))}>No</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="edit-group">
+                <label>Historia</label>
+                <textarea rows={3} value={editForm.story} onChange={e => setEditForm(p => ({ ...p, story: e.target.value }))} placeholder="¿Qué recuerdan de este lugar?" />
+              </div>
+
+              <div className="edit-group">
+                <label>Etiquetas <span className="edit-hint">(separadas por coma)</span></label>
+                <input type="text" value={editForm.tags} onChange={e => setEditForm(p => ({ ...p, tags: e.target.value }))} placeholder="romántico, favorito, tranquilo" />
+              </div>
+
+              <div className="edit-row">
+                <div className="edit-group">
+                  <label>Latitud <span className="edit-hint">(opcional)</span></label>
+                  <input type="number" step="any" value={editForm.lat ?? ''} onChange={e => setEditForm(p => ({ ...p, lat: e.target.value ? parseFloat(e.target.value) : null }))} placeholder="4.7110" />
+                </div>
+                <div className="edit-group">
+                  <label>Longitud <span className="edit-hint">(opcional)</span></label>
+                  <input type="number" step="any" value={editForm.lng ?? ''} onChange={e => setEditForm(p => ({ ...p, lng: e.target.value ? parseFloat(e.target.value) : null }))} placeholder="-74.0721" />
+                </div>
+              </div>
+            </div>
+
+            {editError && <div className="rating-save-banner error">{editError}</div>}
+
+            <div className="edit-panel-footer">
+              <button className="btn-save-rating" onClick={handleSaveEdit} disabled={savingEdit}>
+                {savingEdit ? <span className="auth-spinner" /> : <><Check size={15} /> Guardar cambios</>}
+              </button>
+              <button className="btn-cancel-rating" onClick={() => setShowEditPanel(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="detail-body">
         <div className="detail-main">
