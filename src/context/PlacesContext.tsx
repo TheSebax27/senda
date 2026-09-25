@@ -17,7 +17,7 @@ interface PlacesContextType {
   deleteRating: (placeId: string) => Promise<void>
   // Revisits
   getRevisits: (placeId: string) => Promise<Revisit[]>
-  addRevisit: (placeId: string, visitDate: string, note: string | null) => Promise<{ error: string | null }>
+  addRevisit: (placeId: string, visitDate: string, note: string | null, photoUrl?: string | null) => Promise<{ error: string | null }>
   deleteRevisit: (revisitId: string) => Promise<void>
 }
 
@@ -176,13 +176,15 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
   const addRevisit = async (
     placeId: string,
     visitDate: string,
-    note: string | null
+    note: string | null,
+    photoUrl?: string | null
   ): Promise<{ error: string | null }> => {
     if (!user) return { error: 'No hay sesión activa.' }
     const payload: RevisitInsert = {
       place_id: placeId,
       visit_date: visitDate,
       note: note || null,
+      photo_url: photoUrl || null,
       created_by: user.id,
     }
     const { error } = await supabase.from('revisits').insert(payload)

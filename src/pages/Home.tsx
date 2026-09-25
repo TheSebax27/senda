@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MapPin, Star, ArrowRight } from 'lucide-react'
+import { Star, ArrowRight } from 'lucide-react'
 import { usePlaces } from '../context/PlacesContext'
 import { PlaceCard } from '../components/PlaceCard'
 import './Home.css'
@@ -68,40 +68,6 @@ export function Home() {
           <div className="stat">
             <span className="stat-number">{trips}</span>
             <span className="stat-label">viajes</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Map teaser */}
-      <section className="section map-teaser">
-        <div className="section-header">
-          <div>
-            <h2 className="section-title">Nuestro recorrido</h2>
-            <p className="section-sub">Cada punto, un recuerdo.</p>
-          </div>
-          <Link to="/mapa" className="see-all">Ver mapa completo <ArrowRight size={13} /></Link>
-        </div>
-        <div className="map-preview">
-          <div className="map-placeholder">
-            <div className="map-bg" />
-            {visited.filter(p => p.lat).map(p => (
-              <div
-                key={p.id}
-                className="map-dot"
-                style={{
-                  left: `${((p.lng! + 80) / 20) * 100}%`,
-                  top: `${((12 - p.lat!) / 10) * 100}%`,
-                }}
-                title={p.name}
-              >
-                <span className="map-dot-label">{p.name}</span>
-              </div>
-            ))}
-            <div className="map-overlay-text">
-              <MapPin size={18} />
-              <span>{visited.filter(p => p.lat).length} lugares en el mapa</span>
-              <Link to="/mapa" className="map-btn">Explorar <ArrowRight size={13} /></Link>
-            </div>
           </div>
         </div>
       </section>

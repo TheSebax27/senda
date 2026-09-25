@@ -52,6 +52,7 @@ export interface Revisit {
   place_id: string
   visit_date: string
   note: string | null
+  photo_url: string | null
   created_by: string | null
   profile?: {
     display_name: string

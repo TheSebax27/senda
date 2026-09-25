@@ -667,6 +667,67 @@
   line-height: 1.5;
 }
 
+.revisit-photo-display {
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 4/3;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--border);
+  margin-top: 0.5rem;
+}
+
+/* Revisit photo upload */
+.revisit-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-family: var(--font-sans);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.revisit-photo-btn:hover { border-color: var(--forest); color: var(--forest); }
+
+.revisit-photo-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.revisit-photo-thumb {
+  width: 72px;
+  height: 54px;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.revisit-photo-remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.revisit-photo-remove:hover { border-color: #c0392b; color: #c0392b; }
+
 /* ── Edit panel ────────────────────────────────────── */
 .edit-panel {
   background: var(--bg-subtle);

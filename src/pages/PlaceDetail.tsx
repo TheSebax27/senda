@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import { ArrowLeft, MapPin, Star, RotateCcw, Calendar, DollarSign, Pencil, Trash2, User, RefreshCw, Check, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { ArrowLeft, MapPin, Star, RotateCcw, Calendar, DollarSign, Pencil, Trash2, User, RefreshCw, Check, X, ImagePlus } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import { usePlaces } from '../context/PlacesContext'
 import { useAuth } from '../context/AuthContext'
 import { typeLabel, formatDate, priceLabel } from '../lib/utils'
@@ -76,8 +77,11 @@ export function PlaceDetail() {
   const [showRevisitForm, setShowRevisitForm] = useState(false)
   const [revisitDate, setRevisitDate] = useState(new Date().toISOString().split('T')[0])
   const [revisitNote, setRevisitNote] = useState('')
+  const [revisitPhoto, setRevisitPhoto] = useState<File | null>(null)
+  const [revisitPhotoPreview, setRevisitPhotoPreview] = useState<string | null>(null)
   const [savingRevisit, setSavingRevisit] = useState(false)
   const [revisitMsg, setRevisitMsg] = useState<string | null>(null)
+  const revisitPhotoRef = useRef<HTMLInputElement>(null)
 
   // Editar lugar
   const [showEditPanel, setShowEditPanel] = useState(false)
@@ -116,11 +120,33 @@ export function PlaceDetail() {
     })
   }, [id])
 
+  const handleRevisitPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) { setRevisitMsg('La foto supera 10 MB.'); return }
+    setRevisitPhoto(file)
+    setRevisitPhotoPreview(URL.createObjectURL(file))
+  }
+
   const handleSaveRevisit = async () => {
     if (!id || !revisitDate) return
     setSavingRevisit(true)
     setRevisitMsg(null)
-    const { error } = await addRevisit(id, revisitDate, revisitNote || null)
+
+    let photoUrl: string | null = null
+    if (revisitPhoto) {
+      const ext = revisitPhoto.name.split('.').pop()
+      const path = `revisits/${id}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('place-photos')
+        .upload(path, revisitPhoto)
+      if (!uploadError) {
+        const { data } = supabase.storage.from('place-photos').getPublicUrl(path)
+        photoUrl = data.publicUrl
+      }
+    }
+
+    const { error } = await addRevisit(id, revisitDate, revisitNote || null, photoUrl)
     if (error) {
       setRevisitMsg('Error: ' + error)
     } else {
@@ -129,6 +155,8 @@ export function PlaceDetail() {
       setShowRevisitForm(false)
       setRevisitNote('')
       setRevisitDate(new Date().toISOString().split('T')[0])
+      setRevisitPhoto(null)
+      setRevisitPhotoPreview(null)
     }
     setSavingRevisit(false)
   }
@@ -558,6 +586,36 @@ export function PlaceDetail() {
                       onChange={e => setRevisitNote(e.target.value)}
                     />
                   </div>
+                  <div className="revisit-form-group">
+                    <label>Foto <span className="revisit-optional">(opcional)</span></label>
+                    {revisitPhotoPreview ? (
+                      <div className="revisit-photo-preview">
+                        <div className="revisit-photo-thumb" style={{ backgroundImage: `url(${revisitPhotoPreview})` }} />
+                        <button
+                          type="button"
+                          className="revisit-photo-remove"
+                          onClick={() => { setRevisitPhoto(null); setRevisitPhotoPreview(null) }}
+                        >
+                          <X size={13} /> Quitar
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="revisit-photo-btn"
+                        onClick={() => revisitPhotoRef.current?.click()}
+                      >
+                        <ImagePlus size={15} /> Agregar foto
+                      </button>
+                    )}
+                    <input
+                      ref={revisitPhotoRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleRevisitPhoto}
+                      hidden
+                    />
+                  </div>
                   {revisitMsg && (
                     <div className="rating-save-banner error">{revisitMsg}</div>
                   )}
@@ -571,7 +629,12 @@ export function PlaceDetail() {
                     </button>
                     <button
                       className="btn-cancel-rating"
-                      onClick={() => { setShowRevisitForm(false); setRevisitMsg(null) }}
+                      onClick={() => {
+                        setShowRevisitForm(false)
+                        setRevisitMsg(null)
+                        setRevisitPhoto(null)
+                        setRevisitPhotoPreview(null)
+                      }}
                     >
                       Cancelar
                     </button>
@@ -599,6 +662,9 @@ export function PlaceDetail() {
                           </button>
                         </div>
                         {r.note && <p className="revisit-note">"{r.note}"</p>}
+                        {r.photo_url && (
+                          <div className="revisit-photo-display" style={{ backgroundImage: `url(${r.photo_url})` }} />
+                        )}
                       </div>
                     </div>
                   ))}
