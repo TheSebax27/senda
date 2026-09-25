@@ -45,3 +45,17 @@ export interface Rating {
 
 export type PlaceInsert = Omit<Place, 'id' | 'created_at' | 'rating_avg'>
 export type RatingInsert = Omit<Rating, 'id' | 'created_at' | 'profile'>
+
+export interface Revisit {
+  id: string
+  created_at: string
+  place_id: string
+  visit_date: string
+  note: string | null
+  created_by: string | null
+  profile?: {
+    display_name: string
+    avatar_url: string | null
+  }
+}
+export type RevisitInsert = Omit<Revisit, 'id' | 'created_at' | 'profile'>

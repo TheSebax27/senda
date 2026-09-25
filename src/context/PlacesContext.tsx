@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Place, PlaceInsert, Rating, RatingInsert } from '../types'
+import type { Place, PlaceInsert, Rating, RatingInsert, Revisit, RevisitInsert } from '../types'
 import { useAuth } from './AuthContext'
 
 interface PlacesContextType {
@@ -15,6 +15,10 @@ interface PlacesContextType {
   getRatings: (placeId: string) => Promise<Rating[]>
   upsertRating: (placeId: string, rating: number, comment: string | null) => Promise<{ error: string | null }>
   deleteRating: (placeId: string) => Promise<void>
+  // Revisits
+  getRevisits: (placeId: string) => Promise<Revisit[]>
+  addRevisit: (placeId: string, visitDate: string, note: string | null) => Promise<{ error: string | null }>
+  deleteRevisit: (revisitId: string) => Promise<void>
 }
 
 const PlacesContext = createContext<PlacesContextType | null>(null)
@@ -159,11 +163,43 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
     ))
   }
 
+  const getRevisits = async (placeId: string): Promise<Revisit[]> => {
+    const { data, error } = await supabase
+      .from('revisits')
+      .select('*, profile:profiles(display_name, avatar_url)')
+      .eq('place_id', placeId)
+      .order('visit_date', { ascending: false })
+    if (error) { console.error('Error fetching revisits:', error); return [] }
+    return (data as Revisit[]) || []
+  }
+
+  const addRevisit = async (
+    placeId: string,
+    visitDate: string,
+    note: string | null
+  ): Promise<{ error: string | null }> => {
+    if (!user) return { error: 'No hay sesión activa.' }
+    const payload: RevisitInsert = {
+      place_id: placeId,
+      visit_date: visitDate,
+      note: note || null,
+      created_by: user.id,
+    }
+    const { error } = await supabase.from('revisits').insert(payload)
+    if (error) return { error: error.message }
+    return { error: null }
+  }
+
+  const deleteRevisit = async (revisitId: string) => {
+    await supabase.from('revisits').delete().eq('id', revisitId)
+  }
+
   return (
     <PlacesContext.Provider value={{
       places, loading,
       addPlace, updatePlace, deletePlace, convertToMemory, refresh: fetchPlaces,
       getRatings, upsertRating, deleteRating,
+      getRevisits, addRevisit, deleteRevisit,
     }}>
       {children}
     </PlacesContext.Provider>

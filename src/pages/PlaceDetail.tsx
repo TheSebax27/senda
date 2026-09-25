@@ -1,10 +1,10 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { ArrowLeft, MapPin, Star, RotateCcw, Calendar, DollarSign, Pencil, Trash2, User } from 'lucide-react'
+import { ArrowLeft, MapPin, Star, RotateCcw, Calendar, DollarSign, Pencil, Trash2, User, RefreshCw } from 'lucide-react'
 import { usePlaces } from '../context/PlacesContext'
 import { useAuth } from '../context/AuthContext'
 import { typeLabel, formatDate, priceLabel } from '../lib/utils'
-import type { Rating } from '../types'
+import type { Rating, Revisit } from '../types'
 import './PlaceDetail.css'
 
 function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
@@ -52,7 +52,7 @@ function DeletePlaceModal({ name, onConfirm, onCancel }: {
 
 export function PlaceDetail() {
   const { id } = useParams()
-  const { places, getRatings, upsertRating, deleteRating, deletePlace } = usePlaces()
+  const { places, getRatings, upsertRating, deleteRating, deletePlace, getRevisits, addRevisit, deleteRevisit } = usePlaces()
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -69,6 +69,14 @@ export function PlaceDetail() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
 
+  // Revisits
+  const [revisits, setRevisits] = useState<Revisit[]>([])
+  const [showRevisitForm, setShowRevisitForm] = useState(false)
+  const [revisitDate, setRevisitDate] = useState(new Date().toISOString().split('T')[0])
+  const [revisitNote, setRevisitNote] = useState('')
+  const [savingRevisit, setSavingRevisit] = useState(false)
+  const [revisitMsg, setRevisitMsg] = useState<string | null>(null)
+
   // Eliminar lugar
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -76,16 +84,39 @@ export function PlaceDetail() {
   useEffect(() => {
     if (!id) return
     setRatingsLoading(true)
-    getRatings(id).then(data => {
-      setRatings(data)
-      const mine = data.find(r => r.user_id === user?.id)
+    Promise.all([getRatings(id), getRevisits(id)]).then(([ratingData, revisitData]) => {
+      setRatings(ratingData)
+      const mine = ratingData.find(r => r.user_id === user?.id)
       if (mine) {
         setMyStars(mine.rating)
         setMyComment(mine.comment || '')
       }
+      setRevisits(revisitData)
       setRatingsLoading(false)
     })
   }, [id])
+
+  const handleSaveRevisit = async () => {
+    if (!id || !revisitDate) return
+    setSavingRevisit(true)
+    setRevisitMsg(null)
+    const { error } = await addRevisit(id, revisitDate, revisitNote || null)
+    if (error) {
+      setRevisitMsg('Error: ' + error)
+    } else {
+      const updated = await getRevisits(id)
+      setRevisits(updated)
+      setShowRevisitForm(false)
+      setRevisitNote('')
+      setRevisitDate(new Date().toISOString().split('T')[0])
+    }
+    setSavingRevisit(false)
+  }
+
+  const handleDeleteRevisit = async (revisitId: string) => {
+    await deleteRevisit(revisitId)
+    setRevisits(prev => prev.filter(r => r.id !== revisitId))
+  }
 
   const handleSaveRating = async () => {
     if (!id || myStars === 0) return
@@ -305,6 +336,95 @@ export function PlaceDetail() {
             <section className="detail-section">
               <h2>Nuestra historia</h2>
               <p className="detail-story">{place.story}</p>
+            </section>
+          )}
+
+          {/* Revisits */}
+          {!place.is_planned && (
+            <section className="detail-section revisit-section">
+              <div className="revisit-header">
+                <div>
+                  <h2>Volvimos</h2>
+                  <p className="revisit-sub">
+                    {revisits.length === 0
+                      ? 'Aún no han vuelto a este lugar.'
+                      : `Han vuelto ${revisits.length} ${revisits.length === 1 ? 'vez' : 'veces'}.`}
+                  </p>
+                </div>
+                {!showRevisitForm && (
+                  <button className="btn-revisit" onClick={() => setShowRevisitForm(true)}>
+                    <RefreshCw size={14} /> Marcar revisita
+                  </button>
+                )}
+              </div>
+
+              {showRevisitForm && (
+                <div className="revisit-form">
+                  <div className="revisit-form-row">
+                    <div className="revisit-form-group">
+                      <label>Fecha de la visita</label>
+                      <input
+                        type="date"
+                        value={revisitDate}
+                        onChange={e => setRevisitDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="revisit-form-group">
+                    <label>Nota <span className="revisit-optional">(opcional)</span></label>
+                    <input
+                      type="text"
+                      placeholder="¿Qué recuerdan de esta vez?"
+                      value={revisitNote}
+                      onChange={e => setRevisitNote(e.target.value)}
+                    />
+                  </div>
+                  {revisitMsg && (
+                    <div className="rating-save-banner error">{revisitMsg}</div>
+                  )}
+                  <div className="revisit-form-actions">
+                    <button
+                      className="btn-save-rating"
+                      onClick={handleSaveRevisit}
+                      disabled={!revisitDate || savingRevisit}
+                    >
+                      {savingRevisit ? <span className="auth-spinner" /> : '✦ Guardar'}
+                    </button>
+                    <button
+                      className="btn-cancel-rating"
+                      onClick={() => { setShowRevisitForm(false); setRevisitMsg(null) }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {revisits.length > 0 && (
+                <div className="revisit-list">
+                  {revisits.map(r => (
+                    <div key={r.id} className="revisit-item">
+                      <div className="revisit-dot" />
+                      <div className="revisit-content">
+                        <div className="revisit-meta">
+                          <span className="revisit-date">{formatDate(r.visit_date)}</span>
+                          {r.profile && (
+                            <span className="revisit-who">{r.profile.display_name}</span>
+                          )}
+                          <button
+                            className="revisit-delete"
+                            onClick={() => handleDeleteRevisit(r.id)}
+                            title="Eliminar"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                        {r.note && <p className="revisit-note">"{r.note}"</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           )}
         </div>
